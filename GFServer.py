@@ -65,15 +65,15 @@ class federal:
 		self.name=data['first_name']+' '+data['last_name']
 		self.phone=data['roles'][0]['phone']
 		self.picURL=fetchPhoto(data['twitter_account'])
-		#if data['current_party']=='R':
-		#	self.party='Republican'
-		#else:
-		#	self.party='Democratic'
-		#if data['roles'][0]['chamber']=='House':
-		#	self.senOrRep=1
-		#else:
-		#	self.senOrRep=0
-		#self.fedOrState=0
+		if data['current_party']=='R':
+			self.party='Republican'
+		else:
+			self.party='Democratic'
+		if data['roles'][0]['chamber']=='House':
+			self.senOrRep=1
+		else:
+			self.senOrRep=0
+		self.fedOrState=0
 	def returnDict(self):
 		dict={'name':self.name,'phone':self.phone,'picURL':self.picURL,'party':self.party,'fedOrState':self.fedOrState,'senOrRep':self.senOrRep}
 		return dict
@@ -83,11 +83,10 @@ def fetchPhoto(twitter):
 	URL=r'https://twitter.com/'+twitter
 	source=requests.get(URL)
 	picURL=""
-	text=source.text
-	soup=BeautifulSoup(text)
-	#for photo in 
-	soup.findALL('img')
-	#	picURL=photo.get('src')
+	plain_text=source.text
+	soup=BeautifulSoup(plain_text)
+	for photo in soup.find_all('img',{'class':'ProfileAvatar-image '}):
+		picURL=photo.get('src')
 	return picURL
 
 def fetchFederal(state):
@@ -105,8 +104,7 @@ def fetchFederal(state):
 		ssData=json.loads(ssInfo)
 		ss=ssData['results'][0]
 		ssObject=federal(ss)
-		#fed.append(ssObject.returnDict())
-		fed.append(ss)
+		fed.append(ssObject.returnDict())
 	hReq=requests.get(hURL,headers={"X-API-Key":PPkey})
 	hInfo=hReq.text
 	hData=json.loads(hInfo)
@@ -117,9 +115,8 @@ def fetchFederal(state):
 			hhInfo=hhReq.text
 			hhData=json.loads(hhInfo)
 			hh=hhData['results'][0]
-			#hhObject=federal(hh)
-			#fed.append(hhObject.returnDict())
-			#fed.append(hh)
+			hhObject=federal(hh)
+			fed.append(hhObject.returnDict())
 		else:
 			continue
 	return fed
