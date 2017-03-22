@@ -1,13 +1,55 @@
 from flask import Flask
 
+"""
+server html page that takes information
+connect to data api
+assemble data and drop html page back to browser
+website is where people enter (nonprogramming) scripts"
+"""
+
+
+"""
+    getlabwiki
+"""
+"""
+html character
+-> when you create a script, go with plaintext, plaintext sends stream of chars to server
+what looks like chars is eaten in html, use non-breaking space char in html
+
+
+
+get:
+
+post:
+"""
+
+
+# creation and storing of documents
 
 app = Flask(__name__)
 
 
 @app.route("/")
 def index():
+    """
+    Description:
+        Gets the index page of the web server, returns a from for entering address
+        when you get data back, it returns rep data formtml
+
+        I need to put An's html page
+
+        use location tag as input for put operation
+
+        address = page name
+        use querry to alter uri = address
+
+
+        rest comes down to way u structured urleach object gets unique url
+         """
+         return "Index!"
     # return render('index.html')
     pass
+
 
 @app.route("/", method=['POST'])
 def search():
