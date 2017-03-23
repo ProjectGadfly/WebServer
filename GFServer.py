@@ -131,6 +131,37 @@ def fetchFederal(state,district):
 		fed.append(hhObject.returnDict())
 	return fed
 
+############################
+IP="127.0.0.1"
+# Open database connection
+db = MySQLdb.connect(host="127.0.0.1",user="gadfly_user",passwd="gadfly_pw",db="gadfly")
+# prepare a cursor object using cursor() method
+cursor = db.cursor()
+# execute SQL query using execute() method.
+cursor.execute("SELECT * FROM call_scripts")
+
+# Fetch a single row using fetchone() method.
+data = cursor.fetchone()
+
+print("Call Script : " + str(data))
+
+# disconnect from server
+db.close()
+
+############################
+# Create MYSQL user and set privilges
+
+
+
+
+
+
+
+
+
+
+################################
+
 @GFServer.route('/services/v1/getstate/',methods=['GET'])
 def getState():
 	key=request.headers.get('key')

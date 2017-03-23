@@ -19,3 +19,8 @@ CREATE TABLE call_scripts (
   scope VARCHAR(255) NULL,
   email_address VARCHAR(255) NULL
 );
+
+# Create defult user
+CREATE USER 'gadfly_user'@'127.0.0.1' IDENTIFIED BY 'gadfly_pw';
+GRANT ALL PRIVILEGES ON * . * TO 'gadfly_user'@'127.0.0.1';
+FLUSH PRIVILEGES;
