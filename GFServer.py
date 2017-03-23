@@ -4,6 +4,7 @@ from flask import Flask
 import json
 from bs4 import BeautifulSoup
 import MySQLdb
+import base64
 
 GFServer = Flask(__name__)
 
@@ -43,7 +44,11 @@ def fetchD(address):
 	DData=json.loads(DInfo)
 	D=DData['results'][0]['district']
 	return D
-
+ss=ssData['results'][0]
+		ssObject=federal(ss)
+		fed.append(ssObject.returnDict())
+	hReq=requests.get(hURL,headers={"X-API-Key":PPkey})
+	hI
 class state:
 	def __init__(self,data):
 		self.name=data['full_name']
@@ -88,7 +93,7 @@ class federal:
 			self.senOrRep=0
 		self.fedOrState=0
 	def returnDict(self):
-		dict={'name':self.name,'phone':self.phone,'picURL':self.picURL,'email':'','party':self.party,'fedOrState':self.fedOrState,'senOrRep':self.senOrRep}
+		dict={'name':self.name,'phone':self.phone,'picURticketL':self.picURL,'email':'','party':self.party,'fedOrState':self.fedOrState,'senOrRep':self.senOrRep}
 		return dict
 
 
@@ -126,41 +131,88 @@ def fetchFederal(state,district):
 		hhReq=requests.get(URL,headers={"X-API-Key":PPkey})
 		hhInfo=hhReq.text
 		hhData=json.loads(hhInfo)
-		hh=hhData['results'][0]
-		hhObject=federal(hh)
+def fetchFederal(state,district):
+	fed=[]
+	key=""
+	sURL=r"https://api.propublica.org/congress/v1/members/senate/"+state+r"/current.json"
+	hURL=r"https://api.propublica.org/congress/v1/members/house/"+state+"/"+str(district)+r"/current.json"
+	sReq=requests.get(sURL,headers={"X-API-Key":PPkey})
+	sInfo=sReq.text
+	sData=json.loads(sInfo)
+	for s in sData['results']:
+		URL=r"https://api.propublica.org/congress/v1/members/"+s['id']+".json"
+		ssReq=requests.get(URL,headers={"X-API-Key":PPkey})
+		ssInfo=ssReq.text
+		ssData=json.loads(ssInfo)
+		ss=ssData['results'][0]
+		ssObject=federal(ss)
+
 		fed.append(hhObject.returnDict())
 	return fed
 
 ############################
-IP="127.0.0.1"
+#IP="127.0.0.1"
 # Open database connection
-db = MySQLdb.connect(host="127.0.0.1",user="gadfly_user",passwd="gadfly_pw",db="gadfly")
+#db = MySQLdb.connect(host=IP,user="gadfly_user",passwd="gadfly_pw",db="gadfly")
 # prepare a cursor object using cursor() method
-cursor = db.cursor()
+#cursor = db.cursor()
 # execute SQL query using execute() method.
-cursor.execute("SELECT * FROM call_scripts")
+#cursor.execute("SELECT * FROM call_scripts")
 
 # Fetch a single row using fetchone() method.
-data = cursor.fetchone()
+#data = cursor.fetchone()
 
-print("Call Script : " + str(data))
+#print("Call Script : " + str(data))
 
 # disconnect from server
-db.close()
-
-############################
-# Create MYSQL user and set privilges
-
-
-
-
-
-
-
-
-
+#db.close()
 
 ################################
+# 32 byte base 64 random value
+def random_ticket_gen():
+	ticket = base64.b64encode(token_bytes(24))
+	return ticket
+
+IMPORTANT
+NEED A TAGS TABLE AND A LINKS (RELATIONS, MANY TO MANY) TABLE
+
+
+def insert_new_script(dict):
+	ticket=random_ticket_gen()
+	dict['ticket']=ticket
+	IP="127.0.0.1"
+	db = MySQLdb.connect(host=IP,user="gadfly_user",passwd="gadfly_pw",db="gadfly")
+	cursor = db.cursor()
+	# Look for reports of unique violation constraint for ticket
+	# ticket col is indexed and labeled as unique (unique enforced by database)
+	# check for error indicating ticket is not unique
+	try:
+		cursor.execute("INSERT INTO call_scripts (title, content, ticket, expiration_date) VALUES (%s, %s, %s, CURDATE() + INTERVAL 6 MONTH)",[dict['title'], dict['content'], dict['ticket']])
+		db.commit()
+	except:
+		# revert back those changes completely if an error occurs
+		db.rollback()
+		insert_new_script(dict)
+	db.close()
+
+
+WHAT WE NEED TO DO FOR INSERT NEW SCRIPT
+for tags in dict['tags']
+go into tags table and figure out their tags id_
+then insert arow in links table which contains the tags id and the ticket
+
+
+
+@GFServer.route('/services/v1/postscript/',methods['POST'])
+def postScript():
+	key=request.headers.get('key')
+	if (key != APIkey):
+		return json.dumps({'error':'Wrong API Key!'})
+	title=request.form['title']
+	content=request.form['content']
+	tags=request.form['tags']
+	dict={'title':title,'content':content,'tags':tags,'ticket':""}
+	insert_new_script(dict)
 
 @GFServer.route('/services/v1/getstate/',methods=['GET'])
 def getState():

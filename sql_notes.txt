@@ -4,3 +4,17 @@ Used to create new sql user
 CREATE USER 'gadfly_user'@'127.0.0.1' IDENTIFIED BY 'gadfly_pw';
 GRANT ALL PRIVILEGES ON * . * TO 'gadfly_user'@'127.0.0.1';
 FLUSH PRIVILEGES;
+
+
+
+row_id is internal
+-> serial number, part of how database tracks things
+
+script_id (primary key)
+-> controlled by developers
+
+script id for each script
+ticket id for each script
+ticket randomly generated and should be protected
+enforce unique tickets and scripts
+both should be strings
