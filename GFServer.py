@@ -31,6 +31,17 @@ def fetchS(address):
 			continue
 	return S
 
+def fetchD(address):
+	ll=fetchLL(address)
+	lat=ll['lat']
+	lng=ll['lng']
+	URL=r"https://congress.api.sunlightfoundation.com/districts/locate?latitude="+str(lat)+"&longitude="+str(lng)
+	DReq=requests.get(URL)
+	DInfo=DReq.text
+	DData=json.loads(DInfo)
+	D=DData['results'][0]['district']
+	return D
+
 class state:
 	def __init__(self,data):
 		self.name=data['full_name']
@@ -89,11 +100,11 @@ def fetchPhoto(twitter):
 		picURL=photo.get('src')
 	return picURL
 
-def fetchFederal(state):
+def fetchFederal(state,district):
 	fed=[]
 	key=""
 	sURL=r"https://api.propublica.org/congress/v1/members/senate/"+state+r"/current.json"
-	hURL=r"https://api.propublica.org/congress/v1/115/house/members.json"
+	hURL=r"https://api.propublica.org/congress/v1/members/house/"+state+"/"+str(district)+r"/current.json"
 	sReq=requests.get(sURL,headers={"X-API-Key":PPkey})
 	sInfo=sReq.text
 	sData=json.loads(sInfo)
@@ -108,20 +119,17 @@ def fetchFederal(state):
 	hReq=requests.get(hURL,headers={"X-API-Key":PPkey})
 	hInfo=hReq.text
 	hData=json.loads(hInfo)
-	for h in hData['results'][0]['members']:
-		if state==h['state']:
-			URL=r"https://api.propublica.org/congress/v1/members/"+h['id']+".json"
-			hhReq=requests.get(URL,headers={"X-API-Key":PPkey})
-			hhInfo=hhReq.text
-			hhData=json.loads(hhInfo)
-			hh=hhData['results'][0]
-			hhObject=federal(hh)
-			fed.append(hhObject.returnDict())
-		else:
-			continue
+	for h in hData['results']:
+		URL=r"https://api.propublica.org/congress/v1/members/"+h['id']+".json"
+		hhReq=requests.get(URL,headers={"X-API-Key":PPkey})
+		hhInfo=hhReq.text
+		hhData=json.loads(hhInfo)
+		hh=hhData['results'][0]
+		hhObject=federal(hh)
+		fed.append(hhObject.returnDict())
 	return fed
 
-@GFServer.route('/state/',methods=['GET'])
+@GFServer.route('/services/v1/getstate/',methods=['GET'])
 def getState():
 	address = str(request.args.get(key='address'))
 	address.replace(' ','+')
@@ -133,12 +141,13 @@ def getState():
 		stData.append(stObject.returnDict())
 	return json.dumps(stData,ensure_ascii=False)
 
-@GFServer.route('/federal/',methods=['GET'])
+@GFServer.route('/services/v1/getfederal/',methods=['GET'])
 def getFederal():
 	address = str(request.args.get(key='address'))
 	address.replace(' ','+')
 	S=fetchS(address)
-	FD=fetchFederal(S)
+	D=fetchD(address)
+	FD=fetchFederal(S,D)
 	return json.dumps(FD,ensure_ascii=False)
 
 if __name__ == "__main__":
