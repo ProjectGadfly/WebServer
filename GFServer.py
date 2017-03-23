@@ -9,7 +9,7 @@ GFServer = Flask(__name__)
 
 GGkey=r"AIzaSyD9-4_5QUmogkjgvXdMGYVemsUEVVfy8tI"
 PPkey=r"2PvUNGIQHTaDhSCa3E5WD1klEX67ajkM5eLGkgkO"
-APIkey=r"b9ae3e78eb1c94ee7d7c4cb0cfa0bd889e900f2abefdf75f418c79f133aee28f468f18194b3ce1cd54f1850c332d7b6fd096ee50068cc5cb542efd0bd07cd6f3"
+APIkey=""
 
 def fetchLL(address):
 	URL=r'https://maps.googleapis.com/maps/api/geocode/json?address='+address+'&key='+GGkey
