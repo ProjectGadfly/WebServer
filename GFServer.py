@@ -3,6 +3,7 @@ from flask import request
 from flask import Flask
 import json
 from bs4 import BeautifulSoup
+import MySQLdb
 
 GFServer = Flask(__name__)
 
