@@ -131,7 +131,7 @@ def fetchFederal(state,district):
 		hhReq=requests.get(URL,headers={"X-API-Key":PPkey})
 		hhInfo=hhReq.text
 		hhData=json.loads(hhInfo)
-		
+
 def fetchFederal(state,district):
 	fed=[]
 	key=""
@@ -179,7 +179,7 @@ NEED A TAGS TABLE AND A LINKS (RELATIONS, MANY TO MANY) TABLE
 
 ADD TAGS LINK RECORDS
 def insert_new_script(dict):
-	IP="127.0.0.1"
+	IP = "127.0.0.1"
 	# cnx is the connection to the database
 	cnx = MySQLdb.connect(host = IP, user = "gadfly_user", passwd = "gadfly_pw", db = "gadfly")
 	cursor = cnx.cursor()
@@ -193,8 +193,15 @@ def insert_new_script(dict):
 	# check for error indicating ticket is not unique
 		try:
 			cnx.start_transaction()
-			cursor.execute("INSERT INTO call_scripts (title, content, ticket, expiration_date) VALUES (%s, %s, %s, CURDATE() + INTERVAL 6 MONTH)",[dict['title'], dict['content'], dict['ticket']])
+			cursor.execute("INSERT INTO call_scripts (title, content, ticket, expiration_date) VALUES (%s, %s, %s, CURDATE() + INTERVAL 6 MONTH)", [dict['title'], dict['content'], dict['ticket']])
+			# get id of new script
+			new_id = cnx.insert_id()
 			no_success = False
+
+			# creating new entries in table to associate scripts and tags
+			for tag_id in dict['tags']:
+				cursor.execute("INSERT INTO link_callscripts_tags (call_script_id, tag_id) VALUES (%d, %d)", new_id, tag_id)
+
 			cnx.commit()
 		except MySqlException as e:
 			# 1062 is a unique column value exception, the ticket has a match in the table
@@ -205,6 +212,7 @@ def insert_new_script(dict):
 				# Some other error was encountered and rollback will happen automatically
 				raise
 
+	# for each ticket id, insert a new row for each tag id in the link_callscripts_tags table
 	cnx.close()
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -216,16 +224,27 @@ then insert arow in links table which contains the tags id and the ticket
 
 
 
-@GFServer.route('/services/v1/postscript/',methods['POST'])
+@GFServer.route('/services/v1/script/', methods['POST'])
 def postScript():
-	key=request.headers.get('key')
+	"""
+	title: string,
+    content: string,
+    tags: [list of tag_ids],
+    expiration date: string (MM/DD/YY, optional),
+    email: string (optional)
+
+	"""
+	key = request.headers.get('key')
 	if (key != APIkey):
 		return json.dumps({'error':'Wrong API Key!'})
-	title=request.form['title']
-	content=request.form['content']
-	tags=request.form['tags']
-	dict={'title':title,'content':content,'tags':tags,'ticket':""}
+	title = request.form['title']
+	content = request.form['content']
+	tags = request.form['tags']
+	email = request.form['email']
+	dict = {'title':title, 'content':content, 'tags':tags, 'email':email}
 	insert_new_script(dict)
+	# 'ticket':""
+
 
 @GFServer.route('/services/v1/getstate/',methods=['GET'])
 def getState():
