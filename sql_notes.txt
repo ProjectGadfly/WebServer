@@ -6,12 +6,26 @@ GRANT ALL PRIVILEGES ON * . * TO 'gadfly_user'@'127.0.0.1';
 FLUSH PRIVILEGES;
 
 
+# getting from the database and returning data that will be used for UI (list of tuples, each has a tag_name and tag_id)
+
+
+
+
+
+
+
+
+
+
 
 row_id is internal
 -> serial number, part of how database tracks things
 
 script_id (primary key)
 -> controlled by developers
+auto incremented
+
+
 
 script id for each script
 ticket id for each script

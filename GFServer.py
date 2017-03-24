@@ -131,6 +131,7 @@ def fetchFederal(state,district):
 		hhReq=requests.get(URL,headers={"X-API-Key":PPkey})
 		hhInfo=hhReq.text
 		hhData=json.loads(hhInfo)
+		
 def fetchFederal(state,district):
 	fed=[]
 	key=""
@@ -176,25 +177,37 @@ def random_ticket_gen():
 IMPORTANT
 NEED A TAGS TABLE AND A LINKS (RELATIONS, MANY TO MANY) TABLE
 
-
+ADD TAGS LINK RECORDS
 def insert_new_script(dict):
-	ticket=random_ticket_gen()
-	dict['ticket']=ticket
 	IP="127.0.0.1"
-	db = MySQLdb.connect(host=IP,user="gadfly_user",passwd="gadfly_pw",db="gadfly")
-	cursor = db.cursor()
+	# cnx is the connection to the database
+	cnx = MySQLdb.connect(host = IP, user = "gadfly_user", passwd = "gadfly_pw", db = "gadfly")
+	cursor = cnx.cursor()
+	no_success = True
+
+	while(no_success ):
+		ticket = random_ticket_gen()
+		dict['ticket'] = ticket
 	# Look for reports of unique violation constraint for ticket
 	# ticket col is indexed and labeled as unique (unique enforced by database)
 	# check for error indicating ticket is not unique
-	try:
-		cursor.execute("INSERT INTO call_scripts (title, content, ticket, expiration_date) VALUES (%s, %s, %s, CURDATE() + INTERVAL 6 MONTH)",[dict['title'], dict['content'], dict['ticket']])
-		db.commit()
-	except:
-		# revert back those changes completely if an error occurs
-		db.rollback()
-		insert_new_script(dict)
-	db.close()
+		try:
+			cnx.start_transaction()
+			cursor.execute("INSERT INTO call_scripts (title, content, ticket, expiration_date) VALUES (%s, %s, %s, CURDATE() + INTERVAL 6 MONTH)",[dict['title'], dict['content'], dict['ticket']])
+			no_success = False
+			cnx.commit()
+		except MySqlException as e:
+			# 1062 is a unique column value exception, the ticket has a match in the table
+			# the second condition determines which column failed
+			if e.Number == 1062 and "key 'ticket'" in e.Message:
+				cnx.rollback()
+			else:
+				# Some other error was encountered and rollback will happen automatically
+				raise
 
+	cnx.close()
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 WHAT WE NEED TO DO FOR INSERT NEW SCRIPT
 for tags in dict['tags']

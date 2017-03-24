@@ -1,10 +1,15 @@
+"""
+    INSERT DATA INTO TABLE FOR TESTING TABLES
+"""
+
+
 # Insert minimum necessary values
 INSERT INTO call_scripts (title, content, unique_id, expiration_date)
 VALUES ("My Script", "Make some calls!", "2763134", CURDATE() + INTERVAL 6 MONTH);
 
+
 # View all data in table
 # SELECT * FROM call_scripts;
-
 
 
 # Insert several paragraphs of text in the content field
