@@ -10,7 +10,9 @@ GFServer = Flask(__name__)
 
 GGkey=r"AIzaSyD9-4_5QUmogkjgvXdMGYVemsUEVVfy8tI"
 PPkey=r"2PvUNGIQHTaDhSCa3E5WD1klEX67ajkM5eLGkgkO"
-APIkey=""
+APIkey="v1key"
+
+
 
 def fetchLL(address):
 	URL=r'https://maps.googleapis.com/maps/api/geocode/json?address='+address+'&key='+GGkey
@@ -19,6 +21,8 @@ def fetchLL(address):
 	LLData=json.loads(LLInfo)
 	LL=LLData['results'][0]['geometry']['location']
 	return LL
+
+
 
 def fetchS(address):
 	URL=r'https://maps.googleapis.com/maps/api/geocode/json?address='+address+'&key='+GGkey
@@ -34,27 +38,32 @@ def fetchS(address):
 			continue
 	return S
 
+
+
 def fetchD(address):
-	ll=fetchLL(address)
-	lat=ll['lat']
-	lng=ll['lng']
-	URL=r"https://congress.api.sunlightfoundation.com/districts/locate?latitude="+str(lat)+"&longitude="+str(lng)
-	DReq=requests.get(URL)
-	DInfo=DReq.text
-	DData=json.loads(DInfo)
-	D=DData['results'][0]['district']
+	ll = fetchLL(address)
+	lat = ll['lat']
+	lng = ll['lng']
+	URL = r"https://congress.api.sunlightfoundation.com/districts/locate?latitude=" + str(lat) + "&longitude=" + str(lng)
+	DReq = requests.get(URL)
+	DInfo = DReq.text
+	DData = json.loads(DInfo)
+	D = DData['results'][0]['district']
 	return D
-ss=ssData['results'][0]
-		ssObject=federal(ss)
+
+ss = ssData['results'][0]
+		ssObject = federal(ss)
 		fed.append(ssObject.returnDict())
-	hReq=requests.get(hURL,headers={"X-API-Key":PPkey})
+	hReq = requests.get(hURL,headers = {"X-API-Key":PPkey})
 	hI
+
+
+
 class state:
 	def __init__(self,data):
 		self.name=data['full_name']
-		self.phone=[]
-		for office in data['offices']:
-			if office['name']=='Home Office':
+		self.APIkey=""
+f office['name']=='Home Office':
 				continue
 			else:
 				self.phone.append(office['phone'])
@@ -71,11 +80,11 @@ class state:
 		dict={'name':self.name,'phone':self.phone,'picURL':self.picURL,'email':self.email,'party':self.party,'fedOrState':self.fedOrState,'senOrRep':self.senOrRep}
 		return dict
 
-def fetchState(lat,lng):
-	URL=r"https://openstates.org/api/v1/legislators/geo/?lat="+str(lat)+"&long="+str(lng)
-	stateReq=requests.get(URL)
-	stateInfo=stateReq.text
-	stateData=json.loads(stateInfo)
+def fetchState(lat, lng):
+	URL = r"https://openstates.org/api/v1/legislators/geo/?lat=" + str(lat) + "&long=" + str(lng)
+	stateReq = requests.get(URL)
+	stateInfo = stateReq.text
+	stateData = json.loads(stateInfo)
 	return stateData
 
 class federal:
@@ -87,122 +96,117 @@ class federal:
 			self.party='Republican'
 		else:
 			self.party='Democratic'
-		if data['roles'][0]['chamber']=='House':
-			self.senOrRep=1
+		if data['roles'][0]['chamber'] == 'House':
+			self.senOrRep = 1
 		else:
-			self.senOrRep=0
-		self.fedOrState=0
+			self.senOrRep = 0
+		self.fedOrState = 0
 	def returnDict(self):
-		dict={'name':self.name,'phone':self.phone,'picURticketL':self.picURL,'email':'','party':self.party,'fedOrState':self.fedOrState,'senOrRep':self.senOrRep}
+		dict={'name':self.name, 'phone':self.phone, 'picURticketL':self.picURL,'email':'', 'party':self.party, 'fedOrState':self.fedOrState, 'senOrRep':self.senOrRep}
 		return dict
 
 
 def fetchPhoto(twitter):
-	URL=r'https://twitter.com/'+twitter
-	source=requests.get(URL)
-	picURL=""
-	plain_text=source.text
-	soup=BeautifulSoup(plain_text)
-	for photo in soup.find_all('img',{'class':'ProfileAvatar-image '}):
-		picURL=photo.get('src')
+	URL = r'https://twitter.com/'+twitter
+	source = requests.get(URL)
+	picURL = ""
+	plain_text = source.text
+	soup = BeautifulSoup(plain_text)
+	for photo in soup.find_all('img', {'class':'ProfileAvatar-image '}):
+		picURL = photo.get('src')
 	return picURL
 
-def fetchFederal(state,district):
-	fed=[]
-	key=""
-	sURL=r"https://api.propublica.org/congress/v1/members/senate/"+state+r"/current.json"
-	hURL=r"https://api.propublica.org/congress/v1/members/house/"+state+"/"+str(district)+r"/current.json"
-	sReq=requests.get(sURL,headers={"X-API-Key":PPkey})
-	sInfo=sReq.text
-	sData=json.loads(sInfo)
+def fetchFederal(state, district):
+	fed = []
+	key = ""
+	sURL = r"https://api.propublica.org/congress/v1/members/senate/"+ state + r"/current.json"
+	hURL = r"https://api.propublica.org/congress/v1/members/house/"+ state + "/" + str(district) + r"/current.json"
+	sReq = requests.get(sURL,headers = {"X-API-Key":PPkey})
+	sInfo = sReq.text
+	sData = json.loads(sInfo)
 	for s in sData['results']:
-		URL=r"https://api.propublica.org/congress/v1/members/"+s['id']+".json"
-		ssReq=requests.get(URL,headers={"X-API-Key":PPkey})
-		ssInfo=ssReq.text
-		ssData=json.loads(ssInfo)
-		ss=ssData['results'][0]
-		ssObject=federal(ss)
+		URL = r"https://api.propublica.org/congress/v1/members/"+s['id']+".json"
+		ssReq = requests.get(URL,headers={"X-API-Key":PPkey})
+		ssInfo = ssReq.text
+		ssData = json.loads(ssInfo)
+		ss = ssData['results'][0]
+		ssObject = federal(ss)
 		fed.append(ssObject.returnDict())
-	hReq=requests.get(hURL,headers={"X-API-Key":PPkey})
-	hInfo=hReq.text
-	hData=json.loads(hInfo)
+	hReq = requests.get(hURL,headers = {"X-API-Key":PPkey})
+	hInfo = hReq.text
+	hData = json.loads(hInfo)
 	for h in hData['results']:
-		URL=r"https://api.propublica.org/congress/v1/members/"+h['id']+".json"
-		hhReq=requests.get(URL,headers={"X-API-Key":PPkey})
-		hhInfo=hhReq.text
-		hhData=json.loads(hhInfo)
+		URL = r"https://api.propublica.org/congress/v1/members/" + h['id'] + ".json"
+		hhReq = requests.get(URL,headers = {"X-API-Key":PPkey})
+		hhInfo = hhReq.text
+		hhData = json.loads(hhInfo)
 
-def fetchFederal(state,district):
-	fed=[]
-	key=""
-	sURL=r"https://api.propublica.org/congress/v1/members/senate/"+state+r"/current.json"
-	hURL=r"https://api.propublica.org/congress/v1/members/house/"+state+"/"+str(district)+r"/current.json"
-	sReq=requests.get(sURL,headers={"X-API-Key":PPkey})
-	sInfo=sReq.text
-	sData=json.loads(sInfo)
+def fetchFederal(state, district):
+	fed = []
+	key = ""
+	sURL = r"https://api.propublica.org/congress/v1/members/senate/" + state + r"/current.json"
+	hURL = r"https://api.propublica.org/congress/v1/members/house/" + state + "/" + str(district) + r"/current.json"
+	sReq = requests.get(sURL,headers={"X-API-Key":PPkey})
+	sInfo = sReq.text
+	sData = json.loads(sInfo)
 	for s in sData['results']:
-		URL=r"https://api.propublica.org/congress/v1/members/"+s['id']+".json"
-		ssReq=requests.get(URL,headers={"X-API-Key":PPkey})
-		ssInfo=ssReq.text
-		ssData=json.loads(ssInfo)
-		ss=ssData['results'][0]
-		ssObject=federal(ss)
+		URL = r"https://api.propublica.org/congress/v1/members/" + s['id'] + ".json"
+		ssReq = requests.get(URL,headers = {"X-API-Key":PPkey})
+		ssInfo = ssReq.text
+		ssData = json.loads(ssInfo)
+		ss = ssData['results'][0]
+		ssObject = federal(ss)
 
 		fed.append(hhObject.returnDict())
 	return fed
 
-############################
-#IP="127.0.0.1"
-# Open database connection
-#db = MySQLdb.connect(host=IP,user="gadfly_user",passwd="gadfly_pw",db="gadfly")
-# prepare a cursor object using cursor() method
-#cursor = db.cursor()
-# execute SQL query using execute() method.
-#cursor.execute("SELECT * FROM call_scripts")
 
-# Fetch a single row using fetchone() method.
-#data = cursor.fetchone()
 
-#print("Call Script : " + str(data))
+def generate_QR_code():
+	""" Description:
+		Generates QR Code
+	"""
+	# since the avialability of api is everyones blocking factor
+	# and in the long run the qr code is vital, but in the short term we
+	# dont need the qr code
 
-# disconnect from server
-#db.close()
 
-################################
-# 32 byte base 64 random value
+
 def random_ticket_gen():
+	"""	Description:
+		Returns a ticket wich is a 32 byte base 64 random value
+	"""
 	ticket = base64.b64encode(token_bytes(24))
 	return ticket
 
-IMPORTANT
-NEED A TAGS TABLE AND A LINKS (RELATIONS, MANY TO MANY) TABLE
 
-ADD TAGS LINK RECORDS
+
 def insert_new_script(dict):
+	""" Description:
+		Takes the fields provided in the dict parameter and adds a unique randomly generated ticket to
+		the dict to create a new script.
+	"""
 	IP = "127.0.0.1"
 	# cnx is the connection to the database
 	cnx = MySQLdb.connect(host = IP, user = "gadfly_user", passwd = "gadfly_pw", db = "gadfly")
 	cursor = cnx.cursor()
 	no_success = True
-
-	while(no_success ):
+	while(no_success):
 		ticket = random_ticket_gen()
 		dict['ticket'] = ticket
-	# Look for reports of unique violation constraint for ticket
-	# ticket col is indexed and labeled as unique (unique enforced by database)
-	# check for error indicating ticket is not unique
 		try:
 			cnx.start_transaction()
+			# creates a row in the call script table
 			cursor.execute("INSERT INTO call_scripts (title, content, ticket, expiration_date) VALUES (%s, %s, %s, CURDATE() + INTERVAL 6 MONTH)", [dict['title'], dict['content'], dict['ticket']])
-			# get id of new script
 			new_id = cnx.insert_id()
 			no_success = False
-
-			# creating new entries in table to associate scripts and tags
+			# Create new entries in table to associate scripts and tags
 			for tag_id in dict['tags']:
 				cursor.execute("INSERT INTO link_callscripts_tags (call_script_id, tag_id) VALUES (%d, %d)", new_id, tag_id)
-
 			cnx.commit()
+			"""
+				If email sending is added it will be added here
+			"""
 		except MySqlException as e:
 			# 1062 is a unique column value exception, the ticket has a match in the table
 			# the second condition determines which column failed
@@ -217,11 +221,12 @@ def insert_new_script(dict):
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+"""
 WHAT WE NEED TO DO FOR INSERT NEW SCRIPT
 for tags in dict['tags']
 go into tags table and figure out their tags id_
 then insert arow in links table which contains the tags id and the ticket
-
+"""
 
 
 @GFServer.route('/services/v1/script/', methods['POST'])
@@ -232,7 +237,6 @@ def postScript():
     tags: [list of tag_ids],
     expiration date: string (MM/DD/YY, optional),
     email: string (optional)
-
 	"""
 	key = request.headers.get('key')
 	if (key != APIkey):
@@ -245,32 +249,31 @@ def postScript():
 	insert_new_script(dict)
 	# 'ticket':""
 
-
-@GFServer.route('/services/v1/getstate/',methods=['GET'])
+@GFServer.route('/services/v1/getstate/', methods=['GET'])
 def getState():
-	key=request.headers.get('key')
+	key = request.headers.get('key')
 	if (key != APIkey):
 		return json.dumps({'error':'Wrong API Key!'})
-	address = str(request.args.get(key='address'))
+	address = str(request.args.get(key = 'address'))
 	address.replace(' ','+')
-	LL=fetchLL(address)
-	ST=fetchState(LL['lat'],LL['lng'])
-	stData=[]
+	LL = fetchLL(address)
+	ST = fetchState(LL['lat'], LL['lng'])
+	stData = []
 	for st in ST:
-		stObject=state(st)
+		stObject = state(st)
 		stData.append(stObject.returnDict())
-	return json.dumps(stData,ensure_ascii=False)
+	return json.dumps(stData, ensure_ascii=False)
 
-@GFServer.route('/services/v1/getfederal/',methods=['GET'])
+@GFServer.route('/services/v1/getfederal/', methods=['GET'])
 def getFederal():
-	key=request.headers.get('key')
+	key = request.headers.get('key')
 	if (key != APIkey):
 		return json.dumps({'error':'Wrong API Key!'})
-	address = str(request.args.get(key='address'))
+	address = str(request.args.get(key = 'address'))
 	address.replace(' ','+')
-	S=fetchS(address)
-	D=fetchD(address)
-	FD=fetchFederal(S,D)
+	S = fetchS(address)
+	D = fetchD(address)
+	FD = fetchFederal(S,D)
 	return json.dumps(FD,ensure_ascii=False)
 
 if __name__ == "__main__":
