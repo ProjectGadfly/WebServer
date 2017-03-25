@@ -38,7 +38,7 @@ CREATE TABLE tags (
 -- CASCADE: Delete or update the row from the parent table, and automatically delete or update the matching rows in the child table.
 # Creates the child table that points to the call_scripts and tags tables
 CREATE TABLE link_callscripts_tags (
-  -- may have to manually add indexes
+  -- may have to manually add indexs
   call_script_id INT REFERENCES call_scripts (unique_id) ON DELETE CASCADE
   tag_id INT REFERENCES tags (unique_id) ON DELETE CASCADE
 );

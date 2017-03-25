@@ -14,6 +14,52 @@ APIkey="v1key"
 
 
 
+# GFServer = how flask gets inserted into the sequence of events
+# @ invokes a python process called decoration, applies this function and these
+# parameters to postScript,
+
+@GFServer.route('/services/v1/representatives/', methods=['GET'])
+def getRepresentatives():
+	""" Description:
+		Gets information on senators and representatives given an address.
+		Returns:
+				name: string,
+		 		phone: integer,
+		 		picURL: string,
+		 		email: string,
+		 		party: string,
+		 		tag_names: [list of strings]
+	"""
+	# federal
+	address = str(request.args.get(key = 'address'))
+	# retreive lat and long
+	coordinates = fetchLL(address)
+
+
+
+# https://maps.googleapis.com/maps/api/geocode
+
+@GFServer.route('/services/v1/script/', methods=['POST'])
+def postScript():
+	"""
+	title: string,
+    content: string,
+    tags: [list of tag_ids],
+    expiration date: string (MM/DD/YY, optional),
+    email: string (optional)
+	"""
+	key = request.headers.get('key')
+	if (key != APIkey):
+		return json.dumps({'error':'Wrong API Key!'})
+	title = request.form['title']
+	content = request.form['content']
+	tags = request.form['tags']
+	email = request.form['email']
+	dict = {'title':title, 'content':content, 'tags':tags, 'email':email}
+	insert_new_script(dict)
+
+
+
 def fetchLL(address):
 	URL=r'https://maps.googleapis.com/maps/api/geocode/json?address='+address+'&key='+GGkey
 	LLReq = requests.get(URL)
@@ -24,24 +70,31 @@ def fetchLL(address):
 
 
 
-def fetchS(address):
-	URL=r'https://maps.googleapis.com/maps/api/geocode/json?address='+address+'&key='+GGkey
+def fetchState(address):
+	"""	Purpose:
+		Returns
+	"""
+	URL = r'https://maps.googleapis.com/maps/api/geocode/json?address=' + address + '&key=' + GGkey
 	SReq = requests.get(URL)
-	SInfo=SReq.text
-	SData=json.loads(SInfo)
-	SInfo=SData['results'][0]['address_components']
+	SInfo = SReq.text
+	SData = json.loads(SInfo)
+	# Grabbing out of the first found result,
+	SInfo = SData['results'][0]['address_components']
 	for component in SInfo:
-		if component['types'][0]=='administrative_area_level_1':
-			S=component['short_name']
+		if component['types'][0] == 'administrative_area_level_1':
+			State = component['short_name']
 			break
 		else:
 			continue
-	return S
+	return State
 
 
 
-def fetchD(address):
-	ll = fetchLL(address)
+def fetchDistrict(ll):
+	""" Purpose:
+		Fetches federal district based upon the latitute and longitude passed as a parameter
+	"""
+	#ll = fetchLL(address)
 	lat = ll['lat']
 	lng = ll['lng']
 	URL = r"https://congress.api.sunlightfoundation.com/districts/locate?latitude=" + str(lat) + "&longitude=" + str(lng)
@@ -51,63 +104,66 @@ def fetchD(address):
 	D = DData['results'][0]['district']
 	return D
 
-ss = ssData['results'][0]
-		ssObject = federal(ss)
-		fed.append(ssObject.returnDict())
-	hReq = requests.get(hURL,headers = {"X-API-Key":PPkey})
-	hI
-
 
 
 class state:
-	def __init__(self,data):
+	def __init__(self, data):
 		self.name=data['full_name']
 		self.APIkey=""
-f office['name']=='Home Office':
+		for office in data['offices']:
+			if office['name'] == 'Home Office':
 				continue
 			else:
 				self.phone.append(office['phone'])
-		self.picURL=data['photo_url']
-		self.party=data['party']
-		self.email=data['email']
-		LOH=data['roles'][0]['chamber']
-		if LOH=='lower':
-			self.senOrRep=1
+		self.picURL = data['photo_url']
+		self.party = data['party']
+		self.email = data['email']
+		LOH = data['roles'][0]['chamber']
+		if LOH == 'lower':
+			self.senOrRep = 1
 		else:
-			self.senOrRep=0
-		self.fedOrState=1
+			self.senOrRep = 0
+		self.fedOrState = 1
+
 	def returnDict(self):
-		dict={'name':self.name,'phone':self.phone,'picURL':self.picURL,'email':self.email,'party':self.party,'fedOrState':self.fedOrState,'senOrRep':self.senOrRep}
+		dict = {'name':self.name,'phone':self.phone,'picURL':self.picURL,'email':self.email,'party':self.party,'fedOrState':self.fedOrState,'senOrRep':self.senOrRep}
 		return dict
 
-def fetchState(lat, lng):
-	URL = r"https://openstates.org/api/v1/legislators/geo/?lat=" + str(lat) + "&long=" + str(lng)
-	stateReq = requests.get(URL)
-	stateInfo = stateReq.text
-	stateData = json.loads(stateInfo)
-	return stateData
+	def fetchStateRep(lat, lng):
+		"""	Purpose:
+			Returns the state representatives' data
+		"""
+		URL = r"https://openstates.org/api/v1/legislators/geo/?lat=" + str(lat) + "&long=" + str(lng)
+		stateReq = requests.get(URL)
+		stateInfo = stateReq.text
+		stateData = json.loads(stateInfo)
+		return stateData
+
+
 
 class federal:
-	def __init__(self,data):
-		self.name=data['first_name']+' '+data['last_name']
-		self.phone=data['roles'][0]['phone']
-		self.picURL=fetchPhoto(data['twitter_account'])
-		if data['current_party']=='R':
-			self.party='Republican'
+	def __init__(self, data):
+		self.name = data['first_name'] + ' ' + data['last_name']
+		self.phone = data['roles'][0]['phone']
+		self.picURL = fetchPhoto(data['twitter_account'])
+		if data['current_party'] == 'R':
+			self.party = 'Republican'
 		else:
-			self.party='Democratic'
+			self.party = 'Democratic'
 		if data['roles'][0]['chamber'] == 'House':
 			self.senOrRep = 1
 		else:
 			self.senOrRep = 0
 		self.fedOrState = 0
+
 	def returnDict(self):
-		dict={'name':self.name, 'phone':self.phone, 'picURticketL':self.picURL,'email':'', 'party':self.party, 'fedOrState':self.fedOrState, 'senOrRep':self.senOrRep}
+		dict = {'name':self.name, 'phone':self.phone, 'picURticketL':self.picURL,'email':'', 'party':self.party, 'fedOrState':self.fedOrState, 'senOrRep':self.senOrRep}
 		return dict
 
 
+
 def fetchPhoto(twitter):
-	URL = r'https://twitter.com/'+twitter
+	URL = r'https://twitter.com/' + twitter
 	source = requests.get(URL)
 	picURL = ""
 	plain_text = source.text
@@ -115,6 +171,7 @@ def fetchPhoto(twitter):
 	for photo in soup.find_all('img', {'class':'ProfileAvatar-image '}):
 		picURL = photo.get('src')
 	return picURL
+	federal
 
 def fetchFederal(state, district):
 	fed = []
@@ -130,6 +187,7 @@ def fetchFederal(state, district):
 		ssInfo = ssReq.text
 		ssData = json.loads(ssInfo)
 		ss = ssData['results'][0]
+		# new federal class
 		ssObject = federal(ss)
 		fed.append(ssObject.returnDict())
 	hReq = requests.get(hURL,headers = {"X-API-Key":PPkey})
@@ -229,41 +287,29 @@ then insert arow in links table which contains the tags id and the ticket
 """
 
 
-@GFServer.route('/services/v1/script/', methods['POST'])
-def postScript():
-	"""
-	title: string,
-    content: string,
-    tags: [list of tag_ids],
-    expiration date: string (MM/DD/YY, optional),
-    email: string (optional)
-	"""
-	key = request.headers.get('key')
-	if (key != APIkey):
-		return json.dumps({'error':'Wrong API Key!'})
-	title = request.form['title']
-	content = request.form['content']
-	tags = request.form['tags']
-	email = request.form['email']
-	dict = {'title':title, 'content':content, 'tags':tags, 'email':email}
-	insert_new_script(dict)
-	# 'ticket':""
 
+
+
+"""
 @GFServer.route('/services/v1/getstate/', methods=['GET'])
 def getState():
 	key = request.headers.get('key')
 	if (key != APIkey):
 		return json.dumps({'error':'Wrong API Key!'})
 	address = str(request.args.get(key = 'address'))
-	address.replace(' ','+')
+	address.replace(' ', '+')
 	LL = fetchLL(address)
-	ST = fetchState(LL['lat'], LL['lng'])
+	ST = fetchStateRep(LL['lat'], LL['lng'])
 	stData = []
 	for st in ST:
 		stObject = state(st)
 		stData.append(stObject.returnDict())
 	return json.dumps(stData, ensure_ascii=False)
+"""
 
+
+
+"""
 @GFServer.route('/services/v1/getfederal/', methods=['GET'])
 def getFederal():
 	key = request.headers.get('key')
@@ -271,10 +317,13 @@ def getFederal():
 		return json.dumps({'error':'Wrong API Key!'})
 	address = str(request.args.get(key = 'address'))
 	address.replace(' ','+')
-	S = fetchS(address)
+	S = fetchState(address)
 	D = fetchD(address)
 	FD = fetchFederal(S,D)
 	return json.dumps(FD,ensure_ascii=False)
+"""
+
+
 
 if __name__ == "__main__":
 	GFServer.run()
