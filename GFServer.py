@@ -27,7 +27,7 @@ def addrToGeo(address):
                         break
 
 	return result
-        
+
 
 # GFServer = how flask gets inserted into the sequence of events
 # @ invokes a python process called decoration, applies this function and these
