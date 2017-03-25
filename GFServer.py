@@ -82,7 +82,7 @@ def get_representatives_helper(address):
 	state = dict_coord_state['state']
 	# Retreive Federal Data
 	federals = fetchFederal(state, district)
-	
+
 
 
 
