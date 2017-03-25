@@ -178,7 +178,7 @@ def postScript():
 	email = request.form['email']
 	dict = {'title':title, 'content':content, 'tags':tags, 'email':email}
 	insert_new_script(dict)
-
+	# ZZDO Should return something
 
 
 def fetchLL(address):
@@ -250,15 +250,15 @@ class state:
 		dict = {'name':self.name,'phone':self.phone,'picURL':self.picURL,'email':self.email,'party':self.party,'fedOrState':self.fedOrState,'senOrRep':self.senOrRep}
 		return dict
 
-	def fetchStateRep(lat, lng):
-		"""	Purpose:
-			Returns the state representatives' data
-		"""
-		URL = r"https://openstates.org/api/v1/legislators/geo/?lat=" + str(lat) + "&long=" + str(lng)
-		stateReq = requests.get(URL)
-		stateInfo = stateReq.text
-		stateData = json.loads(stateInfo)
-		return stateData
+def fetchStateRep(lat, lng):
+	"""	Purpose:
+		Returns the state representatives' data
+	"""
+	URL = r"https://openstates.org/api/v1/legislators/geo/?lat=" + str(lat) + "&long=" + str(lng)
+	stateReq = requests.get(URL)
+	stateInfo = stateReq.text
+	stateData = json.loads(stateInfo)
+	return stateData
 
 
 
@@ -344,18 +344,6 @@ def generate_QR_code():
 	# since the avialability of api is everyones blocking factor
 	# and in the long run the qr code is vital, but in the short term we
 	# dont need the qr code
-
-
-
-
-"""
-WHAT WE NEED TO DO FOR INSERT NEW SCRIPT
-for tags in dict['tags']
-go into tags table and figure out their tags id_
-then insert arow in links table which contains the tags id and the ticket
-"""
-
-
 
 
 
