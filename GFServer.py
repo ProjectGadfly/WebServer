@@ -77,9 +77,12 @@ def get_representatives_helper(address):
 		Retreive state and federal representatives from data providers
 	"""
 	dict_coord_state = addrToGeo(address)
+	ll = dict_coord_state['LL']
+	district = fetchDistrict(ll)
+	state = dict_coord_state['state']
 	# Retreive Federal Data
-
-
+	federals = fetchFederal(state, district)
+	
 
 
 
@@ -300,6 +303,9 @@ def fetchPhoto(twitter):
 
 
 def fetchFederal(state, district):
+	"""	Purpose:
+		Returns the list of federal objects
+	"""
 	fed = []
 	key = ""
 	sURL = r"https://api.propublica.org/congress/v1/members/senate/"+ state + r"/current.json"
