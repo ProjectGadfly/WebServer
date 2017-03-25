@@ -12,7 +12,22 @@ GGkey=r"AIzaSyD9-4_5QUmogkjgvXdMGYVemsUEVVfy8tI"
 PPkey=r"2PvUNGIQHTaDhSCa3E5WD1klEX67ajkM5eLGkgkO"
 APIkey="v1key"
 
+# Get both state and latitude/longitude in one call (saves hits on our Google API key, so it's
+# worth a little extra trouble).
+def addrToGeo(address):
+	URL=r'https://maps.googleapis.com/maps/api/geocode/json?address='+address+'&key='+GGkey
+	LLData=json.loads(requests.get(URL).text)
+        if LLData['status'] != 'ok':
+                raise Exception("Error return from Google geocode")
+        result = dict()
+	result['LL']=LLData['results'][0]['geometry']['location']
+        for c in LLData['results'][0]['address_components']:
+                if 'administrative_area_level_1' in c['types']:
+                        result['state'] = c['short_name']
+                        break
 
+	return result
+        
 
 def fetchLL(address):
 	URL=r'https://maps.googleapis.com/maps/api/geocode/json?address='+address+'&key='+GGkey
