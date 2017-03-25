@@ -12,9 +12,14 @@ GGkey=r"AIzaSyD9-4_5QUmogkjgvXdMGYVemsUEVVfy8tI"
 PPkey=r"2PvUNGIQHTaDhSCa3E5WD1klEX67ajkM5eLGkgkO"
 APIkey="v1key"
 
-# Get both state and latitude/longitude in one call (saves hits on our Google API key, so it's
-# worth a little extra trouble).
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 def addrToGeo(address):
+	""" Purpose:
+		Get both state and latitude/longitude in one call (saves hits on our Google API key, so it's
+		worth a little extra trouble).
+	"""
 	URL = r'https://maps.googleapis.com/maps/api/geocode/json?address=' + address + '&key=' + GGkey
 	LLData = json.loads(requests.get(URL).text)
     if LLData['status'] != 'ok':
@@ -33,6 +38,51 @@ def addrToGeo(address):
 # @ invokes a python process called decoration, applies this function and these
 # parameters to postScript,
 
+
+
+
+
+
+def init_tagnames():
+	"""	Purpose:
+		Read in the tags table and cache it into memory
+	"""
+	# establish database connection
+	IP = "127.0.0.1"
+	cnx = MySQLdb.connect(host = IP, user = "gadfly_user", passwd = "gadfly_pw", db = "gadfly")
+	cursor = cnx.cursor()
+	# execute SQL
+	cursor.execute("SELECT tag_name, unique_id FROM tags")
+	# store table in a variable
+	GFServer.g[TagNames] = dict()
+	GFServer.g[TagIDs] = dict()
+	for (name, id) in cursor:
+		GFServer.g[TagNames][name] = id
+		GFServer.g[TagIDs][id] = name
+
+
+
+
+
+
+
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+def get_representatives_helper(address):
+	""" Purpose:
+		Retreive geocode location from address
+		Retreive state and federal representatives from data providers
+	"""
+	dict_coord_state = addrToGeo(address)
+	# Retreive Federal Data
+
+
+
+
+
 @GFServer.route('/services/v1/representatives/', methods=['GET'])
 def getRepresentatives():
 	""" Description:
@@ -45,14 +95,67 @@ def getRepresentatives():
 		 		party: string,
 		 		tag_names: [list of strings]
 	"""
-	# federal
-	address = str(request.args.get(key = 'address'))
-	# retreive lat and long
-	coordinates = fetchLL(address)
+
+
+	address = request.args['address']
+	all_reps = get_representatives_helper(address)
+	js = json.dumps(all_reps)
+    resp = Response(js, status=200, mimetype='application/json')
+	return resp
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+def random_ticket_gen():
+	"""	Description:
+		Returns a ticket wich is a 32 byte base 64 random value
+	"""
+	ticket = base64.b64encode(token_bytes(24))
+	return ticket
 
 
 
-# https://maps.googleapis.com/maps/api/geocode
+def insert_new_script(dict):
+	""" Purpose:
+		Takes the fields provided in the dict parameter and adds a unique randomly generated ticket to
+		the dict to create a new script.
+	"""
+	IP = "127.0.0.1"
+	# cnx is the connection to the database
+	cnx = MySQLdb.connect(host = IP, user = "gadfly_user", passwd = "gadfly_pw", db = "gadfly")
+	cursor = cnx.cursor()
+	no_success = True
+	# Loop ensues ticket to be randomly generated will be unique
+	while(no_success):
+		ticket = random_ticket_gen()
+		dict['ticket'] = ticket
+		try:
+			cnx.start_transaction()
+			# creates a row in the call script table
+			cursor.execute("INSERT INTO call_scripts (title, content, ticket, expiration_date) VALUES (%s, %s, %s, CURDATE() + INTERVAL 6 MONTH)", [dict['title'], dict['content'], dict['ticket']])
+			new_id = cnx.insert_id()
+			no_success = False
+			# Create new entries in table to associate scripts and tags
+			for tag_id in dict['tags']:
+				cursor.execute("INSERT INTO link_callscripts_tags (call_script_id, tag_id) VALUES (%d, %d)", new_id, tag_id)
+			cnx.commit()
+			"""
+				If email sending is added it will be added here
+			"""
+		except MySqlException as e:
+			# 1062 is a unique column value exception, the ticket has a match in the table
+			# the second condition determines which column failed
+			if e.Number == 1062 and "key 'ticket'" in e.Message:
+				cnx.rollback()
+			else:
+				# Some other error was encountered and rollback will happen automatically
+				raise
+
+	# for each ticket id, insert a new row for each tag id in the link_callscripts_tags table
+	cnx.close()
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 @GFServer.route('/services/v1/script/', methods=['POST'])
 def postScript():
@@ -133,7 +236,7 @@ class state:
 		self.picURL = data['photo_url']
 		self.party = data['party']
 		self.email = data['email']
-		LOH = data['roles'][0]['chamber']
+		LOH = data['rolesGFServer'][0]['chamber']
 		if LOH == 'lower':
 			self.senOrRep = 1
 		else:
@@ -158,6 +261,10 @@ class state:
 
 class federal:
 	def __init__(self, data):
+		"""	Purpose:
+			Constructor for the federal class
+		"""
+		self.tags = list()
 		self.name = data['first_name'] + ' ' + data['last_name']
 		self.phone = data['roles'][0]['phone']
 		self.picURL = fetchPhoto(data['twitter_account'])
@@ -166,13 +273,17 @@ class federal:
 		else:
 			self.party = 'Democratic'
 		if data['roles'][0]['chamber'] == 'House':
-			self.senOrRep = 1
+			# array of tag id's
+			self.tags.append(GFServer.g[TagIDs]["representative"])
 		else:
-			self.senOrRep = 0
-		self.fedOrState = 0
+			self.tags.append(GFServer.g[TagIDs]["senator"])
+		self.tags.append(GFServer.g[TagIDs]["federal"])
 
 	def returnDict(self):
-		dict = {'name':self.name, 'phone':self.phone, 'picURticketL':self.picURL,'email':'', 'party':self.party, 'fedOrState':self.fedOrState, 'senOrRep':self.senOrRep}
+		"""	Purpose:
+			Puts all of the data from this federal object into a dictionary
+		"""
+		dict = {'name':self.name, 'phone':self.phone, 'picURticketL':self.picURL,'email':'', 'party':self.party, 'tags':self.tags}
 		return dict
 
 
@@ -186,7 +297,7 @@ def fetchPhoto(twitter):
 	for photo in soup.find_all('img', {'class':'ProfileAvatar-image '}):
 		picURL = photo.get('src')
 	return picURL
-	federal
+
 
 def fetchFederal(state, district):
 	fed = []
@@ -213,23 +324,8 @@ def fetchFederal(state, district):
 		hhReq = requests.get(URL,headers = {"X-API-Key":PPkey})
 		hhInfo = hhReq.text
 		hhData = json.loads(hhInfo)
-
-def fetchFederal(state, district):
-	fed = []
-	key = ""
-	sURL = r"https://api.propublica.org/congress/v1/members/senate/" + state + r"/current.json"
-	hURL = r"https://api.propublica.org/congress/v1/members/house/" + state + "/" + str(district) + r"/current.json"
-	sReq = requests.get(sURL,headers={"X-API-Key":PPkey})
-	sInfo = sReq.text
-	sData = json.loads(sInfo)
-	for s in sData['results']:
-		URL = r"https://api.propublica.org/congress/v1/members/" + s['id'] + ".json"
-		ssReq = requests.get(URL,headers = {"X-API-Key":PPkey})
-		ssInfo = ssReq.text
-		ssData = json.loads(ssInfo)
-		ss = ssData['results'][0]
-		ssObject = federal(ss)
-
+		hh=hhData['results'][0]
+		hhObject=federal(hh)
 		fed.append(hhObject.returnDict())
 	return fed
 
@@ -245,54 +341,6 @@ def generate_QR_code():
 
 
 
-def random_ticket_gen():
-	"""	Description:
-		Returns a ticket wich is a 32 byte base 64 random value
-	"""
-	ticket = base64.b64encode(token_bytes(24))
-	return ticket
-
-
-
-def insert_new_script(dict):
-	""" Description:
-		Takes the fields provided in the dict parameter and adds a unique randomly generated ticket to
-		the dict to create a new script.
-	"""
-	IP = "127.0.0.1"
-	# cnx is the connection to the database
-	cnx = MySQLdb.connect(host = IP, user = "gadfly_user", passwd = "gadfly_pw", db = "gadfly")
-	cursor = cnx.cursor()
-	no_success = True
-	while(no_success):
-		ticket = random_ticket_gen()
-		dict['ticket'] = ticket
-		try:
-			cnx.start_transaction()
-			# creates a row in the call script table
-			cursor.execute("INSERT INTO call_scripts (title, content, ticket, expiration_date) VALUES (%s, %s, %s, CURDATE() + INTERVAL 6 MONTH)", [dict['title'], dict['content'], dict['ticket']])
-			new_id = cnx.insert_id()
-			no_success = False
-			# Create new entries in table to associate scripts and tags
-			for tag_id in dict['tags']:
-				cursor.execute("INSERT INTO link_callscripts_tags (call_script_id, tag_id) VALUES (%d, %d)", new_id, tag_id)
-			cnx.commit()
-			"""
-				If email sending is added it will be added here
-			"""
-		except MySqlException as e:
-			# 1062 is a unique column value exception, the ticket has a match in the table
-			# the second condition determines which column failed
-			if e.Number == 1062 and "key 'ticket'" in e.Message:
-				cnx.rollback()
-			else:
-				# Some other error was encountered and rollback will happen automatically
-				raise
-
-	# for each ticket id, insert a new row for each tag id in the link_callscripts_tags table
-	cnx.close()
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 """
 WHAT WE NEED TO DO FOR INSERT NEW SCRIPT
