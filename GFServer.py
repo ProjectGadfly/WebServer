@@ -80,9 +80,12 @@ def get_representatives_helper(address):
 	ll = dict_coord_state['LL']
 	district = fetchDistrict(ll)
 	state = dict_coord_state['state']
-	# Retreive Federal Data
 	federals = fetchFederal(state, district)
-
+	states = fetchState(ll)
+	# Merge and return federal and state
+	results = federals
+	results.extend(states)
+	return results
 
 
 
@@ -190,11 +193,9 @@ def fetchLL(address):
 	return LL
 
 
-
+# vestigial, name conflict
+"""
 def fetchState(address):
-	"""	Purpose:
-		Returns
-	"""
 	URL = r'https://maps.googleapis.com/maps/api/geocode/json?address=' + address + '&key=' + GGkey
 	SReq = requests.get(URL)
 	SInfo = SReq.text
@@ -208,7 +209,7 @@ def fetchState(address):
 		else:
 			continue
 	return State
-
+"""
 
 
 def fetchDistrict(ll):
@@ -229,8 +230,8 @@ def fetchDistrict(ll):
 
 class state:
 	def __init__(self, data):
+		self.tags = list()
 		self.name=data['full_name']
-		self.APIkey=""
 		for office in data['offices']:
 			if office['name'] == 'Home Office':
 				continue
@@ -241,13 +242,14 @@ class state:
 		self.email = data['email']
 		LOH = data['rolesGFServer'][0]['chamber']
 		if LOH == 'lower':
-			self.senOrRep = 1
+			#self.senOrRep = 1
+			self.tags.append(TagNames['representative'])
 		else:
-			self.senOrRep = 0
-		self.fedOrState = 1
+			self.tags.append(TagNames['senator'])
+		self.tags.append(TagNames['state'])
 
 	def returnDict(self):
-		dict = {'name':self.name,'phone':self.phone,'picURL':self.picURL,'email':self.email,'party':self.party,'fedOrState':self.fedOrState,'senOrRep':self.senOrRep}
+		dict = {'name':self.name,'phone':self.phone,'picURL':self.picURL,'email':self.email,'party':self.party,'tags':self.tags}
 		return dict
 
 def fetchStateRep(lat, lng):
@@ -264,9 +266,6 @@ def fetchStateRep(lat, lng):
 
 class federal:
 	def __init__(self, data):
-		"""	Purpose:
-			Constructor for the federal class
-		"""
 		self.tags = list()
 		self.name = data['first_name'] + ' ' + data['last_name']
 		self.phone = data['roles'][0]['phone']
@@ -347,22 +346,18 @@ def generate_QR_code():
 
 
 
-"""
-@GFServer.route('/services/v1/getstate/', methods=['GET'])
-def getState():
-	key = request.headers.get('key')
-	if (key != APIkey):
-		return json.dumps({'error':'Wrong API Key!'})
-	address = str(request.args.get(key = 'address'))
-	address.replace(' ', '+')
-	LL = fetchLL(address)
+
+def fetchState(LL):
+	"""	Purpose:
+		Fetch all state reps matching the latitude and longitude
+	"""
 	ST = fetchStateRep(LL['lat'], LL['lng'])
 	stData = []
 	for st in ST:
 		stObject = state(st)
 		stData.append(stObject.returnDict())
-	return json.dumps(stData, ensure_ascii=False)
-"""
+	return stData
+
 
 
 
