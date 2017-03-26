@@ -406,8 +406,10 @@ def deleteScript():
 	key = request.headers.get('key')
 	if (key != APIkey):
         return json.dumps({'error':'Wrong API Key!'})
-    # ZZDO implement! Partial implementation in own branch
 
+@GFServer.route('/services/v1/script/', METHODS=['GET'])
+def getScript():
+    # ZZDO Implement!  Partial implemention in other branch
 
 if __name__ == "__main__":
 	GFServer.run()
