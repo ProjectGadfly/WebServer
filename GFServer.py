@@ -8,6 +8,14 @@ import base64
 
 GFServer = Flask(__name__)
 
+# Config info -- most of this should be *elsewhere*, not committed to public repos!
+
+DBIP = "127.0.0.1"
+DBUser = "gadfly_user"
+DBName = "gadfly")
+DBPasswd = "gadfly_pw"
+
+
 GGkey=r"AIzaSyD9-4_5QUmogkjgvXdMGYVemsUEVVfy8tI"
 PPkey=r"2PvUNGIQHTaDhSCa3E5WD1klEX67ajkM5eLGkgkO"
 APIkey="v1key"
@@ -48,8 +56,7 @@ def init_tagnames():
 		Read in the tags table and cache it into memory
 	"""
 	# establish database connection
-	IP = "127.0.0.1"
-	cnx = MySQLdb.connect(host = IP, user = "gadfly_user", passwd = "gadfly_pw", db = "gadfly")
+	cnx = MySQLdb.connect(host = DBIP, user = DBUser, passwd = DBPasswd, db = DBName)
 	cursor = cnx.cursor()
 	# execute SQL
 	cursor.execute("SELECT tag_name, unique_id FROM tags")
@@ -126,9 +133,8 @@ def insert_new_script(dict):
 		Takes the fields provided in the dict parameter and adds a unique randomly generated ticket to
 		the dict to create a new script.
 	"""
-	IP = "127.0.0.1"
 	# cnx is the connection to the database
-	cnx = MySQLdb.connect(host = IP, user = "gadfly_user", passwd = "gadfly_pw", db = "gadfly")
+	cnx = MySQLdb.connect(host = DBIP, user = DBUser, passwd = DBPasswd, db = DBName)
 	cursor = cnx.cursor()
 	no_success = True
 	# Loop ensues ticket to be randomly generated will be unique
