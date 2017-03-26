@@ -31,13 +31,13 @@ def addrToGeo(address):
 	URL = r'https://maps.googleapis.com/maps/api/geocode/json?address=' + address + '&key=' + GGkey
 	LLData = json.loads(requests.get(URL).text)
     if LLData['status'] != 'ok':
-    	raise Exception("Error return from Google geocode")
+	raise Exception("Error return from Google geocode")
     result = dict()
 	result['LL'] = LLData['results'][0]['geometry']['location']
     for c in LLData['results'][0]['address_components']:
-    	if 'administrative_area_level_1' in c['types']:
-            result['state'] = c['short_name']
-            break
+	if 'administrative_area_level_1' in c['types']:
+	    result['state'] = c['short_name']
+	    break
 
 	return result
 
@@ -102,11 +102,11 @@ def getRepresentatives():
 		Gets information on senators and representatives given an address.
 		Returns:
 				name: string,
-		 		phone: integer,
-		 		picURL: string,
-		 		email: string,
-		 		party: string,
-		 		tag_names: [list of strings]
+				phone: integer,
+				picURL: string,
+				email: string,
+				party: string,
+				tag_names: [list of strings]
 	"""
 
 
@@ -197,7 +197,6 @@ def fetchLL(address):
 	LLData=json.loads(LLInfo)
 	LL=LLData['results'][0]['geometry']['location']
 	return LL
-
 
 # vestigial, name conflict
 """
@@ -381,6 +380,33 @@ def getFederal():
 	return json.dumps(FD,ensure_ascii=False)
 """
 
+@GFServer.route('/services/v1/id/', methods=['GET'])
+def getID():
+    """ Purpose:
+        Given a ticket, find and return the script id
+    """
+	key = request.headers.get('key')
+	if (key != APIkey):
+		return json.dumps({'error':'Wrong API Key!'})
+    ticket = request.headers.get('ticket')
+	cnx = MySQLdb.connect(host = DBIP, user = DBUser, passwd = DBPasswd, db = DBName)
+	cursor = cnx.cursor()
+    cursor.execute("SELECT unique_id FROM call_scripts WHERE ticket = %s", ticket,);
+    if cursor.with_rows:
+        row = cursor.fetchone()
+        id = row[0]
+        resp = Response(jason.dumps(id), status=200, mimetype='application/json')
+	    return resp
+    else:
+        resp = Response(None, status=404)
+        return resp
+
+@GFServer.route('/services/v1/script/', methods=['DELETE'])
+def deleteScript():
+	key = request.headers.get('key')
+	if (key != APIkey):
+        return json.dumps({'error':'Wrong API Key!'})
+    # ZZDO implement! Partial implementation in own branch
 
 
 if __name__ == "__main__":
