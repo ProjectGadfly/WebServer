@@ -1,7 +1,5 @@
-"""
-    MAKE APPROPRIATE TABLES AND USER
-"""
 
+#  MAKE APPROPRIATE TABLES AND USER
 
 # Select database gadlfy if it exists
 DROP DATABASE IF EXISTS gadfly;
@@ -23,7 +21,7 @@ CREATE TABLE call_scripts (
   ticket VARCHAR(255) NOT NULL UNIQUE,
   date_created TIMESTAMP NOT NULL,
   expiration_date DATETIME NOT NULL,
-  scope VARCHAR(255) NULL,
+  scope VARCHAR(255) NULL
 );
 
 
@@ -39,7 +37,7 @@ CREATE TABLE tags (
 # Creates the child table that points to the call_scripts and tags tables
 CREATE TABLE link_callscripts_tags (
   -- may have to manually add indexs
-  call_script_id INT REFERENCES call_scripts (unique_id) ON DELETE CASCADE
+  call_script_id INT REFERENCES call_scripts (unique_id) ON DELETE CASCADE,
   tag_id INT REFERENCES tags (unique_id) ON DELETE CASCADE
 );
 
