@@ -7,7 +7,7 @@ import MySQLdb
 import base64
 
 from mysql.connector import MySQLConnection, Error
-from python_mysql_dbconfig import read_db_config
+#from python_mysql_dbconfig import read_db_config
 
 GFServer = Flask(__name__)
 
@@ -15,7 +15,7 @@ GFServer = Flask(__name__)
 
 DBIP = "127.0.0.1"
 DBUser = "gadfly_user"
-DBName = "gadfly")
+DBName = "gadfly"
 DBPasswd = "gadfly_pw"
 
 
