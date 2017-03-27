@@ -197,8 +197,6 @@ def insert_new_script(dict):
     return ticket
 
 
-
-
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 @GFServer.route('/services/v1/script/', methods=['POST'])
@@ -266,8 +264,12 @@ def deleteScript(ticket):
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-
-
+@GFServer.route('/services/v1/alltags', methods['GET'])
+def getAllTags():
+    """ Purpose:
+    """
+    key = request.headers.get('key')
+    
 
 
 
