@@ -11,15 +11,14 @@ from mysql.connector import MySQLConnection, Error
 
 GFServer = Flask(__name__)
 
-
 # Config info -- most of this should be *elsewhere*, not committed to public repos!
+
 DBIP = "127.0.0.1"
 DBUser = "gadfly_user"
 DBName = "gadfly"
 DBPasswd = "gadfly_pw"
 
 
-# Key info -- should not be here in later version
 GGkey=r"AIzaSyD9-4_5QUmogkjgvXdMGYVemsUEVVfy8tI"
 PPkey=r"2PvUNGIQHTaDhSCa3E5WD1klEX67ajkM5eLGkgkO"
 APIkey="v1key"
@@ -28,17 +27,6 @@ APIkey="v1key"
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 def addrToGeo(address):
-<<<<<<< HEAD
-	""" Purpose:
-		Get both state and latitude/longitude in one call (saves hits on our Google API key, so it's
-		worth a little extra trouble).
-
-		Returns:
-		A dictionary
-	"""
-	URL = r'https://maps.googleapis.com/maps/api/geocode/json?address=' + address + '&key=' + GGkey
-	LLData = json.loads(requests.get(URL).text)
-=======
     """ Purpose:
         Get both state and latitude/longitude in one call (saves hits on our Google API key, so it's
         worth a little extra trouble).
@@ -47,7 +35,6 @@ def addrToGeo(address):
     """
     URL = r'https://maps.googleapis.com/maps/api/geocode/json?address=' + address + '&key=' + GGkey
     LLData = json.loads(requests.get(URL).text)
->>>>>>> 21994839ec9766bd8ee88b0efb024b42c1811cfd
     if LLData['status'] != 'ok':
         raise Exception("Error return from Google geocode")
     result = dict()
@@ -61,26 +48,16 @@ def addrToGeo(address):
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# GFServer = how flask gets inserted into the sequence of events
+# @ invokes a python process called decoration, applies this function and these
+# parameters to postScript,
+
+
+
+
+
 
 def init_tagnames():
-<<<<<<< HEAD
-	"""	Purpose:
-		Read in the tags table and cache it into memory
-
-		Returns:
-		Void
-	"""
-	# establish database connection
-	cnx = MySQLdb.connect(host = DBIP, user = DBUser, passwd = DBPasswd, db = DBName)
-	cursor = cnx.cursor()
-	cursor.execute("SELECT tag_name, unique_id FROM tags")
-	GFServer.g[TagNames] = dict()
-	GFServer.g[TagIDs] = dict()
-	# store tag_names and id's into two dictionaries
-	for (name, id) in cursor:
-		GFServer.g[TagNames][name] = id
-		GFServer.g[TagIDs][id] = name
-=======
     """Purpose:
         Read in the tags table and cache it into memory
         Returns:
@@ -98,14 +75,17 @@ def init_tagnames():
     for (name, id) in cursor:
         GFServer.g[TagNames][name] = id
         GFServer.g[TagIDs][id] = name
->>>>>>> 21994839ec9766bd8ee88b0efb024b42c1811cfd
 
-    cursor.close()
-    cnx.close()
-    return
+
+
+
+
+
+
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 
 def get_representatives_helper(address):
     """ Purpose:
@@ -129,18 +109,6 @@ def get_representatives_helper(address):
 
 @GFServer.route('/services/v1/representatives/', methods=['GET'])
 def getRepresentatives():
-<<<<<<< HEAD
-	""" Purpose:
-		Gets information on senators and representatives given an address.
-
-		Returns:
-		A response object with representative data
-	"""
-	address = request.args['address']
-	# Retreive representative data from helper function
-	all_reps = get_representatives_helper(address)
-	js = json.dumps(all_reps)
-=======
     """ Description:
         Gets information on senators and representatives given an address.
         Returns:
@@ -157,143 +125,22 @@ def getRepresentatives():
     # Retreive representative data from helper function
     all_reps = get_representatives_helper(address)
     js = json.dumps(all_reps)
->>>>>>> 21994839ec9766bd8ee88b0efb024b42c1811cfd
     resp = Response(js, status=200, mimetype='application/json')
     return resp
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-<<<<<<< HEAD
-@GFServer.route('/services/v1/script', methods['GET'])
-def getScript():
-	""" Purpose:
-        Gets a specific call script given a script ID
-	"""
-	key = request.headers.get('key')
-	if (key != APIkey):
-		return json.dumps({'error':'Wrong API Key!'})
-    cnx = MySQLdb.connect(host = DBIP, user = DBUser, passwd = DBPasswd, db = DBName)
-	cursor = cnx.cursor()
-	no_success = True
-	while(no_success):
-		try:
-			cnx.start_transaction()
-			id = str(request.args.get(key = 'id'));
-			cursor.execute("SELECT title, content FROM call_scripts WHERE unique_id=" + id)
-			script_row = cursor.fetchone()
-			cursor.execute("SELECT tag_id FROM link_callscripts_tags WHERE call_script_id=" + id)
-			tag_rows = cursor.fetchall()
-			tag_ids = []
-			tag_names = []
-			for row in tag_rows:
-				tags.append(row[0])
-			for tag_id in tag_ids:
-				cursor.execute("SELECT tag_name FROM tags WHERE unique_id=" + tag_id)
-				tag_name_row = cursor.fetchone()
-				tag_names.append(tag_name_row[0])
-			script = {'title':script_row[0],'content':script_row[1],'tags':tag_names}
-			no_success = False
-			cnx.commit()
-		except:
-			return json.dumps("{'failure':'failed to fetch script!'}")
-
-    cursor.close()
-	cnx.close()
-	return json.dumps(script)
-
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-@GFServer.route('/services/v1/id/', methods=['GET'])
-def getID():
-    """ Purpose:
-        Given a ticket, find and return the script id
-    """
-	key = request.headers.get('key')
-	if (key != APIkey):
-		return json.dumps({'error':'Wrong API Key!'})
-    ticket = request.headers.get('ticket')
-	cnx = MySQLdb.connect(host = DBIP, user = DBUser, passwd = DBPasswd, db = DBName)
-	cursor = cnx.cursor()
-    cursor.execute("SELECT unique_id FROM call_scripts WHERE ticket = %s", ticket,);
-    if cursor.with_rows:
-        row = cursor.fetchone()
-        id = row[0]
-        resp = Response(jason.dumps(id), status=200, mimetype='application/json')
-        cursor.close()
-        cnx.close()
-	return resp
-    else:
-        resp = Response(None, status=404)
-        cursor.close()
-        cnx.close()
-        return resp
-
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-def generate_random_ticket():
-	"""	Purpose:
-		Returns a ticket wich is a 32 byte base 64 random value in string form
-	"""
-	ticket = base64.b64encode(token_bytes(24))
-	return ticket
-=======
 def random_ticket_gen():
     """Description:
         Returns a ticket wich is a 32 byte base 64 random value in string form
     """
     ticket = base64.b64encode(token_bytes(24))
     return ticket
->>>>>>> 21994839ec9766bd8ee88b0efb024b42c1811cfd
 
 
 
 def insert_new_script(dict):
-<<<<<<< HEAD
-	""" Purpose:
-		Takes the fields provided in the dict parameter and adds a unique randomly generated ticket to
-		the dict to create a new script.
-
-		Returns:
-		A string, ticket OR an exception
-	"""
-	IP = "127.0.0.1"
-	# connect to database
-	cnx = MySQLdb.connect(host = DBIP, user = DBUser, passwd = DBPasswd, db = DBName)
-	cursor = cnx.cursor()
-	no_success = True
-	# Loop ensues ticket to be randomly generated will be unique
-	while(no_success):
-		ticket = generate_random_ticket()
-		dict['ticket'] = ticket
-		try:
-			cnx.start_transaction()
-			# creates a row in the call script table
-			cursor.execute("INSERT INTO call_scripts (title, content, ticket, expiration_date) VALUES (%s, %s, %s, CURDATE() + INTERVAL 6 MONTH)", [dict['title'], dict['content'], dict['ticket']])
-			new_id = cnx.insert_id()
-			no_success = False
-			# Create new entries in table to associate scripts and tags
-			for tag_id in dict['tags']:
-				cursor.execute("INSERT INTO link_callscripts_tags (call_script_id, tag_id) VALUES (%d, %d)", new_id, tag_id)
-			cnx.commit()
-			"""
-				If email sending is added it will be added here
-			"""
-		except MySqlException as e:
-			# 1062 is a unique column value exception, the ticket has a match in the table
-			# the second condition determines which column failed
-			if e.Number == 1062 and "key 'ticket'" in e.Message:
-				cnx.rollback()
-			else:
-				# Some other error was encountered and rollback will happen automatically
-				raise
-
-    cursor.close()
-	cnx.close()
-	return ticket
-=======
     """ Purpose:
         Takes the fields provided in the dict parameter and adds a unique randomly generated ticket to
         the dict to create a new script.
@@ -334,34 +181,17 @@ def insert_new_script(dict):
     cnx.close()
     return ticket
 
+<<<<<<< HEAD
+
+=======
     
->>>>>>> 21994839ec9766bd8ee88b0efb024b42c1811cfd
+>>>>>>> 9c96957b62bd84f37a99ee946d43a9e18c02bb37
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 @GFServer.route('/services/v1/script/', methods=['POST'])
 def postScript():
-<<<<<<< HEAD
-	"""
-	Purpose:
-	Posts a new script given information inputted by a user and returns a unique ticket.
-	This ticket will be in the unique URL to that script for the user to access if they want to delete the script in the future.
-
-    Returns:
-	Ticket, a 32 character string in base64
-	"""
-	key = request.headers.get('key')
-	if (key != APIkey):
-		return json.dumps({'error':'Wrong API Key!'})
-	title = request.form['title']
-	content = request.form['content']
-	tags = request.form['tags']
-	email = request.form['email']
-	dict = {'title':title, 'content':content, 'tags':tags, 'email':email}
-	insert_new_script(dict)
-	return ticket
-=======
     """
     Purpose:
     Posts a new script given information inputted by a user and returns a unique ticket.
@@ -379,55 +209,23 @@ def postScript():
     dict = {'title':title, 'content':content, 'tags':tags, 'email':email}
     insert_new_script(dict)
     return ticket
->>>>>>> 21994839ec9766bd8ee88b0efb024b42c1811cfd
-
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 @GFServer.route('/services/v1/script/', methods=['DELETE'])
 def deleteScript(ticket):
-<<<<<<< HEAD
-	""" Purpose:
-		Deletes script given a ticket.
-		The ticket is internally tied to the script ID.
-		This will allow script-writers to "edit" or delete their script.
-
-		Parameter:
-		ticket, a string list
-
-		Returns:
-		On success, 200 error
-		On failure, 400 error
-
-		Useful Source:
-		http://www.mysqltutorial.org/python-mysql-delete-data/
-	"""
-	# connection to database
-    key = request.headers.get('key')
-	if (key != APIkey):
-		return json.dumps({'error':'Wrong API Key!'})
-    cnx = MySQLdb.connect(host = DBIP, user = DBUser, passwd = DBPasswd, db = DBName)
-	cursor = cnx.cursor()
-	# try to delete call script based on ticket number parameter
-	try:
-		query = "DELETE FROM call_scripts WHERE id = %s"
-		cursor.execute(query, (ticket,))
-		success_resp = Response(js, status=200, mimetype='application/json')
-		# save the changes and close connections
-		cnx.commit()
-		cursor.close()
-		cnx.close()
-		return success_resp
-	except Error as error:
-		failure_resp = Response(js, status=404, mimetype='application/json')
-		cursor.close()
-		cnx.close()
-		return failure_resp
-=======
     """ Purpose:
         Deletes script given a ticket.
         The ticket is internally tied to the script ID.
         This will allow script-writers to "edit" or delete their script.
+<<<<<<< HEAD
+        Parameter:
+        ticket, a string list
+
+        Returns:
+        On success, 200 error
+        On failure, 400 error
+=======
 
         Parameter:
         ticket, a string list
@@ -436,6 +234,7 @@ def deleteScript(ticket):
         On success, 200 error
         On failure, 400 error
 
+>>>>>>> 9c96957b62bd84f37a99ee946d43a9e18c02bb37
         Useful Source:
         http://www.mysqltutorial.org/python-mysql-delete-data/
     """
@@ -461,59 +260,20 @@ def deleteScript(ticket):
         cursor.close()
         cnx.close()
         return failure_resp
->>>>>>> 21994839ec9766bd8ee88b0efb024b42c1811cfd
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-@GFServer.route('/services/v1/alltags/', methods['GET'])
-def getAllTags():
-	""" Purpose:
-        Returns all tag names and tag id's for use in building UI elements
 
-        Returns:
-        A list of tuples with each containing a tag_name and tag_id
-	"""
-	key = request.headers.get('key')
-	if (key != APIkey):
-		return json.dumps({'error':'Wrong API Key!'})
-    cnx = MySQLdb.connect(host = DBIP, user = DBUser, passwd = DBPasswd, db = DBName)
-	cursor = cnx.cursor()
-	sql = "SELECT * FROM tags"
-    tags = []
 
-	try:
-		cursor.execute(sql)
-        # rows of a query result set and returns a list of tuples
-		results = cursor.fetchall()
-        for row in results:
-			entry = {'tag_id':row[0],'tag_name':row[1]}
-            tags.append(entry)
-	except:
-		return json.dumps("{'failure':'failed to fetch script!'}")
 
-    cursor.close()
-	cnx.close()
-	return json.dumps(tags)
+
+
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 def fetchLL(address):
-<<<<<<< HEAD
-    """ Purpose:
-        Fetch the latitude and longitude coordinates
-    """
-	URL=r'https://maps.googleapis.com/maps/api/geocode/json?address='+address+'&key='+GGkey
-	LLReq = requests.get(URL)
-	LLInfo = LLReq.text
-	LLData = json.loads(LLInfo)
-	LL = LLData['results'][0]['geometry']['location']
-	return LL
-
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-=======
     URL=r'https://maps.googleapis.com/maps/api/geocode/json?address='+address+'&key='+GGkey
     LLReq = requests.get(URL)
     LLInfo=LLReq.text
@@ -540,7 +300,6 @@ def fetchState(address):
     return State
 """
 
->>>>>>> 21994839ec9766bd8ee88b0efb024b42c1811cfd
 
 def fetchDistrict(ll):
     """ Purpose:
@@ -624,28 +383,8 @@ class federal:
         return dict
 
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 def fetchPhoto(twitter):
-<<<<<<< HEAD
-    """ Purpose:
-        Retreive the twitter photo of a representative
-
-        Parameter:
-        A string that is the twitter account of a representative
-
-        Returns:
-        A string, the url of the photo
-    """
-	URL = r'https://twitter.com/' + twitter
-	source = requests.get(URL)
-	picURL = ""
-	plain_text = source.text
-	soup = BeautifulSoup(plain_text)
-	for photo in soup.find_all('img', {'class':'ProfileAvatar-image '}):
-		picURL = photo.get('src')
-	return picURL
-=======
     URL = r'https://twitter.com/' + twitter
     source = requests.get(URL)
     picURL = ""
@@ -654,10 +393,7 @@ def fetchPhoto(twitter):
     for photo in soup.find_all('img', {'class':'ProfileAvatar-image '}):
         picURL = photo.get('src')
     return picURL
->>>>>>> 21994839ec9766bd8ee88b0efb024b42c1811cfd
 
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 def fetchFederal(state, district):
     """    Purpose:
@@ -693,7 +429,6 @@ def fetchFederal(state, district):
     return fed
 
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 def generate_QR_code():
     """ Description:
@@ -704,7 +439,7 @@ def generate_QR_code():
     # dont need the qr code
 
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 
 def fetchState(LL):
     """Purpose:
@@ -718,15 +453,6 @@ def fetchState(LL):
     return stData
 
 
-<<<<<<< HEAD
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-if __name__ == "__main__":
-	GFServer.run()
-
-
-""" END """
-=======
 
 
 """
@@ -766,5 +492,8 @@ def getID():
 
 
 if __name__ == "__main__":
+<<<<<<< HEAD
+GFServer.run()
+=======
     GFServer.run()
->>>>>>> 21994839ec9766bd8ee88b0efb024b42c1811cfd
+>>>>>>> 9c96957b62bd84f37a99ee946d43a9e18c02bb37

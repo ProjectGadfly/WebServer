@@ -11,14 +11,15 @@ from mysql.connector import MySQLConnection, Error
 
 GFServer = Flask(__name__)
 
-# Config info -- most of this should be *elsewhere*, not committed to public repos!
 
+# Config info -- most of this should be *elsewhere*, not committed to public repos!
 DBIP = "127.0.0.1"
 DBUser = "gadfly_user"
 DBName = "gadfly"
 DBPasswd = "gadfly_pw"
 
 
+# Keys should be removed from GFServer.py
 GGkey=r"AIzaSyD9-4_5QUmogkjgvXdMGYVemsUEVVfy8tI"
 PPkey=r"2PvUNGIQHTaDhSCa3E5WD1klEX67ajkM5eLGkgkO"
 APIkey="v1key"
@@ -77,13 +78,6 @@ def init_tagnames():
         GFServer.g[TagIDs][id] = name
 
 
-
-
-
-
-
-
-
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -119,14 +113,35 @@ def getRepresentatives():
                  party: string,
                  tag_names: [list of strings]
     """
-
-
     address = request.args['address']
     # Retreive representative data from helper function
     all_reps = get_representatives_helper(address)
     js = json.dumps(all_reps)
     resp = Response(js, status=200, mimetype='application/json')
     return resp
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -214,12 +229,14 @@ def deleteScript(ticket):
         Deletes script given a ticket.
         The ticket is internally tied to the script ID.
         This will allow script-writers to "edit" or delete their script.
+
         Parameter:
         ticket, a string list
 
         Returns:
         On success, 200 error
         On failure, 400 error
+
         Useful Source:
         http://www.mysqltutorial.org/python-mysql-delete-data/
     """
@@ -477,4 +494,4 @@ def getID():
 
 
 if __name__ == "__main__":
-GFServer.run()
+    GFServer.run()
