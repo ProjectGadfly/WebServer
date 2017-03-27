@@ -264,21 +264,18 @@ def deleteScript(ticket):
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-@GFServer.route('/services/v1/alltags/', methods['GET'])
+@GFServer.route('/services/v1/alltags/', methods = ['GET'])
 def getAllTags():
-	key = request.headers.get('key')
-	if (key != APIkey):
-		return json.dumps({'error':'Wrong API Key!'})
+    key = request.headers.get('key')
+    if (key != APIkey):
+        return json.dumps({'error':'Wrong API Key!'})
 
-        tags = list()
-        for t in GFServer.g.TagNames:
-                entry = [t, GFServer.g.TagNames[t]]
-                tags.append(entry)
+    tags = list()
+    for t in GFServer.g.TagNames:
+        entry = [t, GFServer.g.TagNames[t]]
+        tags.append(entry)
 
-	return json.dumps(tags);
-
-
-
+    return json.dumps(tags);
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
