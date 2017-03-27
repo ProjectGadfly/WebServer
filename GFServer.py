@@ -495,8 +495,5 @@ def getID():
         return resp
 
 
-@GFServer.route('/foo/bar/mumble)_
-
-
 if __name__ == "__main__":
     GFServer.run()
