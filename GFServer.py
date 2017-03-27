@@ -6,6 +6,9 @@ from bs4 import BeautifulSoup
 import MySQLdb
 import base64
 
+from mysql.connector import MySQLConnection, Error
+from python_mysql_dbconfig import read_db_config
+
 GFServer = Flask(__name__)
 
 GGkey=r"AIzaSyD9-4_5QUmogkjgvXdMGYVemsUEVVfy8tI"
@@ -19,6 +22,8 @@ def addrToGeo(address):
 	""" Purpose:
 		Get both state and latitude/longitude in one call (saves hits on our Google API key, so it's
 		worth a little extra trouble).
+		Returns:
+		A dictionary, with state and coordinates
 	"""
 	URL = r'https://maps.googleapis.com/maps/api/geocode/json?address=' + address + '&key=' + GGkey
 	LLData = json.loads(requests.get(URL).text)
@@ -34,18 +39,16 @@ def addrToGeo(address):
 	return result
 
 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # GFServer = how flask gets inserted into the sequence of events
 # @ invokes a python process called decoration, applies this function and these
 # parameters to postScript,
 
-
-
-
-
-
 def init_tagnames():
 	"""	Purpose:
 		Read in the tags table and cache it into memory
+		Returns:
+		Void
 	"""
 	# establish database connection
 	IP = "127.0.0.1"
@@ -54,22 +57,17 @@ def init_tagnames():
 	# execute SQL
 	cursor.execute("SELECT tag_name, unique_id FROM tags")
 	# store table in a variable
+	# g is made available on flask instance
+	# g saves global stuff that is shared across all copies
 	GFServer.g[TagNames] = dict()
 	GFServer.g[TagIDs] = dict()
+	# store tag_names and id's into two dictionaries
 	for (name, id) in cursor:
 		GFServer.g[TagNames][name] = id
 		GFServer.g[TagIDs][id] = name
 
 
-
-
-
-
-
-
-
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 
 def get_representatives_helper(address):
 	""" Purpose:
@@ -80,7 +78,9 @@ def get_representatives_helper(address):
 	ll = dict_coord_state['LL']
 	district = fetchDistrict(ll)
 	state = dict_coord_state['state']
+	# retreive federal data
 	federals = fetchFederal(state, district)
+	# retreive state data
 	states = fetchState(ll)
 	# Merge and return federal and state
 	results = federals
@@ -101,9 +101,8 @@ def getRepresentatives():
 		 		party: string,
 		 		tag_names: [list of strings]
 	"""
-
-
 	address = request.args['address']
+	# Retreive representative data
 	all_reps = get_representatives_helper(address)
 	js = json.dumps(all_reps)
     resp = Response(js, status=200, mimetype='application/json')
@@ -156,9 +155,8 @@ def insert_new_script(dict):
 			else:
 				# Some other error was encountered and rollback will happen automatically
 				raise
-
-	# for each ticket id, insert a new row for each tag id in the link_callscripts_tags table
 	cnx.close()
+	# for each ticket id, insert a new row for each tag id in the link_callscripts_tags table
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -183,6 +181,58 @@ def postScript():
 	insert_new_script(dict)
 	# ZZDO Should return something
 
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+@GFServer.route('/services/v1/script/', methods=['DELETE'])
+def deleteScript(ticket):
+	""" Purpose:
+		Deletes script given a ticket.
+		The ticket is internally tied to the script ID.
+		This will allow script-writers to "edit" or delete their script.
+		Parameter:
+		ticket, a string list
+		Returns:
+		On success, 200 error
+		On failure, 400 error
+
+		Useful Source:
+		http://www.mysqltutorial.org/python-mysql-delete-data/
+	"""
+	# not touching tags table
+	# connection to database
+	IP = "127.0.0.1"
+	cnx = MySQLdb.connect(host = IP, user = "gadfly_user", passwd = "gadfly_pw", db = "gadfly")
+	cursor = cnx.cursor()
+	# try to delete call script based on ticket number parameter
+	try:
+		query = "DELETE FROM call_scripts WHERE id = %s"
+		cursor.execute(query, (ticket,))
+		# success case
+		success_resp = Response(js, status=200, mimetype='application/json')
+		# save the changes
+		cnx.commit()
+		cursor.close()
+		cnx.close()
+		return success_resp
+	except Error as error:
+		# failure case
+		failure_resp = Response(js, status=404, mimetype='application/json')
+		cursor.close()
+		cnx.close()
+		return failure_resp
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+
+
+
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 def fetchLL(address):
 	URL=r'https://maps.googleapis.com/maps/api/geocode/json?address='+address+'&key='+GGkey
@@ -374,6 +424,28 @@ def getFederal():
 	FD = fetchFederal(S,D)
 	return json.dumps(FD,ensure_ascii=False)
 """
+
+
+@GFServer.route('/services/v1/id/', methods=['GET'])
+def getID():
+    """ Purpose:
+        Given a ticket, find and return the script id
+    """
+	key = request.headers.get('key')
+	if (key != APIkey):
+		return json.dumps({'error':'Wrong API Key!'})
+    ticket = request.headers.get('ticket')
+	cnx = MySQLdb.connect(host = DBIP, user = DBUser, passwd = DBPasswd, db = DBName)
+	cursor = cnx.cursor()
+    cursor.execute("SELECT unique_id FROM call_scripts WHERE ticket = %s", ticket,);
+    if cursor.with_rows:
+        row = cursor.fetchone()
+        id = row[0]
+        resp = Response(jason.dumps(id), status=200, mimetype='application/json')
+	    return resp
+    else:
+        resp = Response(None, status=404)
+return resp
 
 
 
