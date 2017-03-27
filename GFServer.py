@@ -241,7 +241,7 @@ def deleteScript(ticket):
     # not touching tags table
     # connection to database
     IP = "127.0.0.1"
-    cnx = MySQLdb.connect(host = IP, user = "gadfly_user", passwd = "gadfly_pw", db = "gadfly")
+    cnx = MySQLdb.connect(host = DBIP, user = DBUser, passwd = DBPasswd, db = DBName)
     cursor = cnx.cursor()
     # try to delete call script based on ticket number parameter
     try:
@@ -267,10 +267,31 @@ def deleteScript(ticket):
 @GFServer.route('/services/v1/alltags', methods['GET'])
 def getAllTags():
     """ Purpose:
+        Returns all tag names and tag id's for use in building UI elements
+
+        Returns:
+        A list of tuples with each containing a tag_name and tag_id
     """
     key = request.headers.get('key')
-    
+    if (key != APIkey):
+        return json.dumps({'error':'Wrong API Key!'})
+    # establish connection to the database
+    cnx = MySQLdb.connect(host = DBIP, user = DBUser, passwd = DBPasswd, db = DBName)
+    cursor = cnx.cursor()
+    sql = "SELECT * FROM tags"
+    tags = []
+    try:
+        cursor.execute(sql)
+        results = cursor.fetchall()
+        for row in results:
+            entry = {'tag_id':row[0], 'tag_name':row[1]}
+            tags.append(entry)
+    except:
+        return json.dumps("{'failure':'failed to fetch script!'}")
 
+    cursor.close()
+    cnx.close()
+    return json.dumps(tags)
 
 
 
