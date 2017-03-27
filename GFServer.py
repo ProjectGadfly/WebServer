@@ -1,6 +1,7 @@
 import requests
 from flask import request
 from flask import Flask
+from flask import Response
 import json
 from bs4 import BeautifulSoup
 import MySQLdb
@@ -10,7 +11,6 @@ from mysql.connector import MySQLConnection, Error
 #from python_mysql_dbconfig import read_db_config
 
 GFServer = Flask(__name__)
-
 
 # Config info -- most of this should be *elsewhere*, not committed to public repos!
 DBIP = "127.0.0.1"
@@ -57,6 +57,8 @@ def addrToGeo(address):
 
 
 
+TagNames = dict()
+TagIDs = dict()
 
 def init_tagnames():
     """Purpose:
@@ -69,14 +71,14 @@ def init_tagnames():
     cursor = cnx.cursor()
     # execute SQL
     cursor.execute("SELECT tag_name, unique_id FROM tags")
+    thetags = cursor.fetchall()
     # store table in a variable
-    GFServer.g[TagNames] = dict()
-    GFServer.g[TagIDs] = dict()
     # store tag_names and id's into two dictionaries
-    for (name, id) in cursor:
-        GFServer.g[TagNames][name] = id
-        GFServer.g[TagIDs][id] = name
+    for row in thetags:
+        TagNames['name'] = row[0]
+        TagIDs['id'] = row[1]
 
+init_tagnames()
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -266,16 +268,21 @@ def deleteScript(ticket):
 
 @GFServer.route('/services/v1/alltags/', methods = ['GET'])
 def getAllTags():
-    key = request.headers.get('key')
+    key = request.headers.get('APIKey')
+    print ("point a")
     if (key != APIkey):
-        return json.dumps({'error':'Wrong API Key!'})
+        print ("point b")
+        failure_resp = Response('Wrong API Key!', status=404)
+        return failure_resp
 
     tags = list()
-    for t in GFServer.g.TagNames:
-        entry = [t, GFServer.g.TagNames[t]]
+    print ("point c")
+    print ("debug" + json.dumps(TagNames))
+    for t in TagNames:
+        entry = [t, TagNames[t]]
         tags.append(entry)
 
-    return json.dumps(tags);
+    return Response (json.dumps(tags), status=200, mimetype='application/json')
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
