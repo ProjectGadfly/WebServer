@@ -23,7 +23,7 @@ def addrToGeo(address):
 		Get both state and latitude/longitude in one call (saves hits on our Google API key, so it's
 		worth a little extra trouble).
 		Returns:
-		A dictionary, with state and coordinates
+		A dictionary
 	"""
 	URL = r'https://maps.googleapis.com/maps/api/geocode/json?address=' + address + '&key=' + GGkey
 	LLData = json.loads(requests.get(URL).text)
@@ -73,6 +73,7 @@ def get_representatives_helper(address):
 	""" Purpose:
 		Retreive geocode location from address
 		Retreive state and federal representatives from data providers
+
 	"""
 	dict_coord_state = addrToGeo(address)
 	ll = dict_coord_state['LL']
@@ -102,7 +103,7 @@ def getRepresentatives():
 		 		tag_names: [list of strings]
 	"""
 	address = request.args['address']
-	# Retreive representative data
+	# Retreive representative data from helper function
 	all_reps = get_representatives_helper(address)
 	js = json.dumps(all_reps)
     resp = Response(js, status=200, mimetype='application/json')
@@ -113,7 +114,7 @@ def getRepresentatives():
 
 def random_ticket_gen():
 	"""	Description:
-		Returns a ticket wich is a 32 byte base 64 random value
+		Returns a ticket wich is a 32 byte base 64 random value in string form
 	"""
 	ticket = base64.b64encode(token_bytes(24))
 	return ticket
@@ -124,6 +125,8 @@ def insert_new_script(dict):
 	""" Purpose:
 		Takes the fields provided in the dict parameter and adds a unique randomly generated ticket to
 		the dict to create a new script.
+		Returns:
+		A string, ticket OR an exception
 	"""
 	IP = "127.0.0.1"
 	# cnx is the connection to the database
@@ -155,7 +158,9 @@ def insert_new_script(dict):
 			else:
 				# Some other error was encountered and rollback will happen automatically
 				raise
+
 	cnx.close()
+	return ticket
 	# for each ticket id, insert a new row for each tag id in the link_callscripts_tags table
 
 
@@ -164,11 +169,11 @@ def insert_new_script(dict):
 @GFServer.route('/services/v1/script/', methods=['POST'])
 def postScript():
 	"""
-	title: string,
-    content: string,
-    tags: [list of tag_ids],
-    expiration date: string (MM/DD/YY, optional),
-    email: string (optional)
+	Purpose:
+	Posts a new script given information inputted by a user and returns a unique ticket.
+	This ticket will be in the unique URL to that script for the user to access if they want to delete the script in the future.
+	Returns:
+	Ticket, a 32 character string in base64
 	"""
 	key = request.headers.get('key')
 	if (key != APIkey):
@@ -179,8 +184,7 @@ def postScript():
 	email = request.form['email']
 	dict = {'title':title, 'content':content, 'tags':tags, 'email':email}
 	insert_new_script(dict)
-	# ZZDO Should return something
-
+	return ticket
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -190,8 +194,10 @@ def deleteScript(ticket):
 		Deletes script given a ticket.
 		The ticket is internally tied to the script ID.
 		This will allow script-writers to "edit" or delete their script.
+
 		Parameter:
 		ticket, a string list
+		
 		Returns:
 		On success, 200 error
 		On failure, 400 error
@@ -277,6 +283,7 @@ def fetchDistrict(ll):
 	return D
 
 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class state:
 	def __init__(self, data):
@@ -302,6 +309,9 @@ class state:
 		dict = {'name':self.name,'phone':self.phone,'picURL':self.picURL,'email':self.email,'party':self.party,'tags':self.tags}
 		return dict
 
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 def fetchStateRep(lat, lng):
 	"""	Purpose:
 		Returns the state representatives' data
@@ -313,6 +323,7 @@ def fetchStateRep(lat, lng):
 	return stateData
 
 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class federal:
 	def __init__(self, data):
@@ -357,8 +368,8 @@ def fetchFederal(state, district):
 	"""
 	fed = []
 	key = ""
-	sURL = r"https://api.propublica.org/congress/v1/members/senate/"+ state + r"/current.json"
-	hURL = r"https://api.propublica.org/congress/v1/members/house/"+ state + "/" + str(district) + r"/current.json"
+	sURL = r"https://api.propublica.org/congress/v1/members/senate/" + state + r"/current.json"
+	hURL = r"https://api.propublica.org/congress/v1/members/house/" + state + "/" + str(district) + r"/current.json"
 	sReq = requests.get(sURL,headers = {"X-API-Key":PPkey})
 	sInfo = sReq.text
 	sData = json.loads(sInfo)
