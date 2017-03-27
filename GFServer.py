@@ -264,34 +264,18 @@ def deleteScript(ticket):
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-@GFServer.route('/services/v1/alltags', methods['GET'])
+@GFServer.route('/services/v1/alltags/', methods['GET'])
 def getAllTags():
-    """ Purpose:
-        Returns all tag names and tag id's for use in building UI elements
+	key = request.headers.get('key')
+	if (key != APIkey):
+		return json.dumps({'error':'Wrong API Key!'})
 
-        Returns:
-        A list of tuples with each containing a tag_name and tag_id
-    """
-    key = request.headers.get('key')
-    if (key != APIkey):
-        return json.dumps({'error':'Wrong API Key!'})
-    # establish connection to the database
-    cnx = MySQLdb.connect(host = DBIP, user = DBUser, passwd = DBPasswd, db = DBName)
-    cursor = cnx.cursor()
-    sql = "SELECT * FROM tags"
-    tags = []
-    try:
-        cursor.execute(sql)
-        results = cursor.fetchall()
-        for row in results:
-            entry = {'tag_id':row[0], 'tag_name':row[1]}
-            tags.append(entry)
-    except:
-        return json.dumps("{'failure':'failed to fetch script!'}")
+        tags = list()
+        for t in GFServer.g.TagNames:
+                entry = [t, GFServer.g.TagNames[t]]
+                tags.append(entry)
 
-    cursor.close()
-    cnx.close()
-    return json.dumps(tags)
+	return json.dumps(tags);
 
 
 
