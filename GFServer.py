@@ -472,7 +472,7 @@ def getID():
         row = cursor.fetchone()
         id = row[0]
         resp = Response(jason.dumps(id), status=200, mimetype='application/json')
-    return resp
+        return resp
     else:
         resp = Response(None, status=404)
         return resp
