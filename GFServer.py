@@ -11,6 +11,14 @@ from python_mysql_dbconfig import read_db_config
 
 GFServer = Flask(__name__)
 
+# Config info -- most of this should be *elsewhere*, not committed to public repos!
+
+DBIP = "127.0.0.1"
+DBUser = "gadfly_user"
+DBName = "gadfly")
+DBPasswd = "gadfly_pw"
+
+
 GGkey=r"AIzaSyD9-4_5QUmogkjgvXdMGYVemsUEVVfy8tI"
 PPkey=r"2PvUNGIQHTaDhSCa3E5WD1klEX67ajkM5eLGkgkO"
 APIkey="v1key"
@@ -44,6 +52,11 @@ def addrToGeo(address):
 # @ invokes a python process called decoration, applies this function and these
 # parameters to postScript,
 
+
+
+
+
+
 def init_tagnames():
 	"""	Purpose:
 		Read in the tags table and cache it into memory
@@ -51,14 +64,11 @@ def init_tagnames():
 		Void
 	"""
 	# establish database connection
-	IP = "127.0.0.1"
-	cnx = MySQLdb.connect(host = IP, user = "gadfly_user", passwd = "gadfly_pw", db = "gadfly")
+	cnx = MySQLdb.connect(host = DBIP, user = DBUser, passwd = DBPasswd, db = DBName)
 	cursor = cnx.cursor()
 	# execute SQL
 	cursor.execute("SELECT tag_name, unique_id FROM tags")
 	# store table in a variable
-	# g is made available on flask instance
-	# g saves global stuff that is shared across all copies
 	GFServer.g[TagNames] = dict()
 	GFServer.g[TagIDs] = dict()
 	# store tag_names and id's into two dictionaries
@@ -67,13 +77,20 @@ def init_tagnames():
 		GFServer.g[TagIDs][id] = name
 
 
+
+
+
+
+
+
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 
 def get_representatives_helper(address):
 	""" Purpose:
 		Retreive geocode location from address
 		Retreive state and federal representatives from data providers
-
 	"""
 	dict_coord_state = addrToGeo(address)
 	ll = dict_coord_state['LL']
@@ -102,6 +119,8 @@ def getRepresentatives():
 		 		party: string,
 		 		tag_names: [list of strings]
 	"""
+
+
 	address = request.args['address']
 	# Retreive representative data from helper function
 	all_reps = get_representatives_helper(address)
@@ -130,7 +149,7 @@ def insert_new_script(dict):
 	"""
 	IP = "127.0.0.1"
 	# cnx is the connection to the database
-	cnx = MySQLdb.connect(host = IP, user = "gadfly_user", passwd = "gadfly_pw", db = "gadfly")
+	cnx = MySQLdb.connect(host = DBIP, user = DBUser, passwd = DBPasswd, db = DBName)
 	cursor = cnx.cursor()
 	no_success = True
 	# Loop ensues ticket to be randomly generated will be unique
@@ -161,7 +180,8 @@ def insert_new_script(dict):
 
 	cnx.close()
 	return ticket
-	# for each ticket id, insert a new row for each tag id in the link_callscripts_tags table
+
+	
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -436,7 +456,6 @@ def getFederal():
 	return json.dumps(FD,ensure_ascii=False)
 """
 
-
 @GFServer.route('/services/v1/id/', methods=['GET'])
 def getID():
     """ Purpose:
@@ -453,11 +472,10 @@ def getID():
         row = cursor.fetchone()
         id = row[0]
         resp = Response(jason.dumps(id), status=200, mimetype='application/json')
-	    return resp
+	return resp
     else:
         resp = Response(None, status=404)
-return resp
-
+        return resp
 
 
 if __name__ == "__main__":
