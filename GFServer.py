@@ -4,7 +4,7 @@ from flask import Flask
 from flask import Response
 import json
 from bs4 import BeautifulSoup
-import MySQLdb
+import mysqlclient 
 import base64
 
 from mysql.connector import MySQLConnection, Error
@@ -52,33 +52,6 @@ def addrToGeo(address):
 # GFServer = how flask gets inserted into the sequence of events
 # @ invokes a python process called decoration, applies this function and these
 # parameters to postScript,
-
-
-
-
-
-TagNames = dict()
-TagIDs = dict()
-
-def init_tagnames():
-    """Purpose:
-        Read in the tags table and cache it into memory
-        Returns:
-        Void
-    """
-    # establish database connection
-    cnx = MySQLdb.connect(host = DBIP, user = DBUser, passwd = DBPasswd, db = DBName)
-    cursor = cnx.cursor()
-    # execute SQL
-    cursor.execute("SELECT tag_name, unique_id FROM tags")
-    thetags = cursor.fetchall()
-    # store table in a variable
-    # store tag_names and id's into two dictionaries
-    for row in thetags:
-        TagNames['name'] = row[0]
-        TagIDs['id'] = row[1]
-
-init_tagnames()
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -266,6 +239,27 @@ def deleteScript(ticket):
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+Tags = dict()
+
+def init_tagnames():
+    """Purpose:
+        Read in the tags table and cache it into memory
+        Returns:
+        Void
+    """
+    # establish database connection
+    cnx = MySQLdb.connect(host = DBIP, user = DBUser, passwd = DBPasswd, db = DBName)
+    cursor = cnx.cursor()
+    # execute SQL
+    cursor.execute("SELECT tag_name, unique_id FROM tags")
+    thetags = cursor.fetchall()
+    # store table in a variable
+    # store tag_names and id's into two dictionaries
+    for row in thetags:
+        Tags[row[0]] = row[1]
+
+init_tagnames()
+
 @GFServer.route('/services/v1/alltags/', methods = ['GET'])
 def getAllTags():
     key = request.headers.get('APIKey')
@@ -275,14 +269,10 @@ def getAllTags():
         failure_resp = Response('Wrong API Key!', status=404)
         return failure_resp
 
-    tags = list()
     print ("point c")
-    print ("debug" + json.dumps(TagNames))
-    for t in TagNames:
-        entry = [t, TagNames[t]]
-        tags.append(entry)
+    print ("debug" + json.dumps(Tags))
 
-    return Response (json.dumps(tags), status=200, mimetype='application/json')
+    return Response (json.dumps(Tags), status=200, mimetype='application/json')
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
