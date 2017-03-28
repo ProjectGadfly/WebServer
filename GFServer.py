@@ -228,7 +228,7 @@ def get_representatives_helper(address):
 
 
 
-@GFServer.route('/services/v1/representatives/', methods=['GET'])
+@GFServer.route('/services/v1/representatives', methods=['GET'])
 def getRepresentatives():
     """ Description:
         Gets information on senators and representatives given an address.
@@ -242,7 +242,7 @@ def getRepresentatives():
     """
     key = request.headers.get('APIKey')
     if (key != APIkey):
-        return json.dumps({'error':'Wrong API Key!'})
+        return Response('Error: Wrong API Key!', status=401)
     address = request.args['address']
     # Retreive representative data from helper function
     all_reps = get_representatives_helper(address)
