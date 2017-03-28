@@ -15,9 +15,9 @@ GFServer = Flask(__name__)
 
 # Config info -- most of this should be *elsewhere*, not committed to public repos!
 DBIP = "127.0.0.1"
-DBUser = "root"
+DBUser = "gadfly_user"
 DBName = "gadfly"
-DBPasswd = "Czw100806918"
+DBPasswd = "gadfly_pw"
 
 
 # Keys should be removed from GFServer.py
