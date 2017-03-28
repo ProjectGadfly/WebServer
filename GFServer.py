@@ -17,7 +17,7 @@ GFServer = Flask(__name__)
 DBIP = "127.0.0.1"
 DBUser = "gadfly_user"
 DBName = "gadfly"
-DBPasswd = "gadfly_pw"
+DBPasswd = "gadfly_PW123"
 
 
 # Keys should be removed from GFServer.py
@@ -276,8 +276,12 @@ def insert_new_script(dict):
     no_success = True
     # Loop ensues ticket to be randomly generated will be unique
     while(no_success):
-        ticket = random_ticket_gen()
-        command="SELECT EXISTS(SELECT title FROM call_scripts WHERE ticket={})".format(ticket)
+        ticket = str(random_ticket_gen())
+        length=len(ticket)
+        ticket=ticket[2:length-1]
+        print(ticket)
+        command="SELECT EXISTS(SELECT title FROM call_scripts WHERE ticket='{}')".format(ticket)
+        print(command)
         cursor.execute(command)
         result=cursor.fetchone()[0]
         if result==0:
