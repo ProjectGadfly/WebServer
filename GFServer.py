@@ -16,7 +16,7 @@ GFServer = Flask(__name__)
 DBIP = "127.0.0.1"
 DBUser = "gadfly_user"
 DBName = "gadfly"
-DBPasswd = "gadfly_pw"
+DBPasswd = "gadfly_PW123"
 
 
 # Keys should be removed from GFServer.py
