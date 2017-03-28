@@ -21,7 +21,6 @@ CREATE TABLE call_scripts (
   ticket VARCHAR(255) NOT NULL UNIQUE,
   date_created TIMESTAMP NOT NULL,
   expiration_date DATETIME NOT NULL,
-  scope VARCHAR(255) NULL
 );
 
 

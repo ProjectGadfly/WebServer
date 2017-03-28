@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 import MySQLdb 
 import base64
 from os import urandom
+import pyqrcode
 
 #from mysql.connector import MySQLConnection, Error
 #from python_mysql_dbconfig import read_db_config
@@ -47,14 +48,12 @@ def addrToGeo(address):
         if 'administrative_area_level_1' in c['types']:
             result['state'] = c['short_name']
             break
-
     return result
 
 def fetchDistrict(ll):
     """ Purpose:
         Fetches federal district based upon the latitute and longitude passed as a parameter
     """
-    #ll = fetchLL(address)
     lat = ll['lat']
     lng = ll['lng']
     URL = r"https://congress.api.sunlightfoundation.com/districts/locate?latitude=" + str(lat) + "&longitude=" + str(lng)
@@ -80,15 +79,6 @@ def fetchPhoto(twitter):
         picURL = photo.get('src')
     return picURL
 
-
-
-def generate_QR_code():
-    """ Description:
-        Generates QR Code
-    """
-    # since the avialability of api is everyones blocking factor
-    # and in the long run the qr code is vital, but in the short term we
-    # dont need the qr code
 
 
 # end support functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`
@@ -234,11 +224,11 @@ def getRepresentatives():
         Gets information on senators and representatives given an address.
         Returns:
                 name: string,
-                 phone: integer,
-                 picURL: string,
-                 email: string,
-                 party: string,
-                 tag_names: [list of strings]
+                phone: integer,
+                picURL: string,
+                email: string,
+                party: string,
+                tag_names: [list of strings]
     """
     key = request.headers.get('APIKey')
     if (key != APIkey):
@@ -267,7 +257,7 @@ def insert_new_script(dict):
         Takes the fields provided in the dict parameter and adds a unique randomly generated ticket to
         the dict to create a new script.
         Returns:
-        A string, ticket OR an exception
+        A dict, with ticket and id
     """
     IP = "127.0.0.1"
     # cnx is the connection to the database
@@ -318,10 +308,14 @@ def insert_new_script(dict):
                 # Some other error was encountered and rollback will happen automatically
 			#    raise
     except:
-        return "break"
+        cnx.close()
+        resp = Response("{'Error':'Post failed'}", status=404, mimetype='application/json')
+        return resp
 
     cnx.close()
-    return ticket
+    result={'ticket':ticket,'id':new_id}
+    resp = Response(json.dumps(result), status=200, mimetype='application/json')
+    return resp
 
 
 @GFServer.route('/services/v1/script/', methods=['POST'])
@@ -331,7 +325,7 @@ def postScript():
     Posts a new script given information inputted by a user and returns a unique ticket.
     This ticket will be in the unique URL to that script for the user to access if they want to delete the script in the future.
     Returns:
-    Ticket, a 32 character string in base64
+    A dict with a ticket and a id
     """
     key = request.headers.get('APIKey')
     if (key != APIkey):
@@ -339,8 +333,8 @@ def postScript():
     request.get_json(force=True)
     script_dict=request.json
     print("json: "+str(script_dict['tags']))
-    ticket = insert_new_script(script_dict)
-    return ticket
+    resp = insert_new_script(script_dict)
+    return resp
 
 # end post new script~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -365,13 +359,21 @@ def deleteScript():
     """
     # not touching tags table
     # connection to database
-    IP = "127.0.0.1"
     key = request.headers.get('APIKey')
     if (key != APIkey):
         return Response('Error: Wrong API Key!', status=401)
     ticket=request.args['ticket']
+    ticket=ticket.replace(" ","+")
     cnx = MySQLdb.connect(host = DBIP, user = DBUser, passwd = DBPasswd, db = DBName)
     cursor = cnx.cursor()
+    print("ticketttttttt"+ticket)
+    command="SELECT EXISTS(SELECT title FROM call_scripts WHERE ticket='{}')".format(ticket)
+    cursor.execute(command)
+    result=cursor.fetchone()[0]
+    print("resultttttt"+str(result))
+    if result==0:
+        resp = Response("{'Error':'No such ticket'}", status=404, mimetype='application/json')
+        return resp
     # try to delete call script based on ticket number parameter
     try:
         print("start delete script")
@@ -379,19 +381,19 @@ def deleteScript():
         print(query)
         cursor.execute(query)
         # success case
-		#success_resp = Response(js, status=200, mimetype='application/json')
+        success_resp = Response("{'Result':'Success'}", status=200, mimetype='application/json')
         # save the changes
         cnx.commit()
         cnx.close()
-        return "200"
+        return success_resp
     except Error as error:
         # failure case
-		#ifailure_resp = Response(js, status=404, mimetype='application/json')
+        failure_resp = Response("{'Result':'Failed'}", status=404, mimetype='application/json')
         cnx.close()
-        return "400"
+        return failure_resp
 
 
-# delete script~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# end delete script~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # alltags~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -399,7 +401,8 @@ TagNames = dict()
 TagIDs = dict()
 
 def init_tagnames():
-    """Purpose:
+    """
+		Purpose:
         Read in the tags table and cache it into memory
         Returns:
         Void
@@ -416,6 +419,7 @@ def init_tagnames():
         TagIDs[row[0]] = row[1]
         TagNames[row[1]] = row[0]
 
+#automatically load all tags when application start
 init_tagnames()
 
 @GFServer.route('/services/v1/alltags/', methods = ['GET'])
@@ -442,16 +446,24 @@ def getID():
         return Response('Error: Wrong API Key!', status=401)
 
     ticket = request.args['ticket']
+    ticket=ticket.replace(" ","+")
     cnx = MySQLdb.connect(host = DBIP, user = DBUser, passwd = DBPasswd, db = DBName)
     cursor = cnx.cursor()
+    command="SELECT EXISTS(SELECT title FROM call_scripts WHERE ticket='{}')".format(ticket)
+    cursor.execute(command)
+    result=cursor.fetchone()[0]
+    if result==0:
+        resp = Response("{'Error':'No such ticket'}", status=404, mimetype='application/json')
+        return resp
     try:
         cursor.execute("SELECT unique_id FROM call_scripts WHERE ticket = {}".format(ticket));
         row = cursor.fetchone()
         id = row[0]
-        resp = Response(json.dumps(id), status=200, mimetype='application/json')
+        resp = Response("{'id':"+id+"}", status=200, mimetype='application/json')
         return resp
     except:
-        return "failed"
+        resp = Response("{'id':null}", status=404, mimetype='application/json')
+        return resp
 
 
 
@@ -467,6 +479,12 @@ def getScript():
     id = request.args['id']
     cnx = MySQLdb.connect(host = DBIP, user = DBUser, passwd = DBPasswd, db = DBName)
     cursor = cnx.cursor()
+    command="SELECT EXISTS(SELECT title FROM call_scripts WHERE unique_id={})".format(id)
+    cursor.execute(command)
+    result=cursor.fetchone()[0]
+    if result==0:
+        resp = Response("{'Error':'No such id'}", status=404, mimetype='application/json')
+        return resp
     try:
         print("start to get script")
         cursor.execute("SELECT title,content FROM call_scripts WHERE unique_id = {}".format(id));
@@ -488,12 +506,11 @@ def getScript():
             tag_name=cursor.fetchone()[0]
             print(tag_name)
             script['tags'].append(tag_name)
-		#resp = Response(json.dumps(script), status=200, mimetype='application/json')
-		#return resp
-        print(str(script))
-        return json.dumps(script)
+        resp = Response(json.dumps(script), status=200, mimetype='application/json')
+        return resp
     except:
-        return "failed"
+        resp = Response("{'Script':null}", status=404, mimetype='application/json')
+        return resp
 
 
 # end get id and script~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
