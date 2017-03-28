@@ -6,7 +6,7 @@ import json
 from bs4 import BeautifulSoup
 import MySQLdb 
 import base64
-#import secrets
+from os import urandom
 
 #from mysql.connector import MySQLConnection, Error
 #from python_mysql_dbconfig import read_db_config
@@ -257,9 +257,7 @@ def random_ticket_gen():
     """Description:
         Returns a ticket wich is a 32 byte base 64 random value in string form
     """
-	#ticket = base64.b64encode(secrets.token_bytes(24))
-	#ticket="12313123"
-    ticket="12313"
+    ticket = base64.b64encode(urandom(24))
     return ticket
 
 
