@@ -26,7 +26,8 @@ PPkey=r"2PvUNGIQHTaDhSCa3E5WD1klEX67ajkM5eLGkgkO"
 APIkey="v1key"
 
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#get geo~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 
 def addrToGeo(address):
     """ Purpose:
@@ -48,6 +49,155 @@ def addrToGeo(address):
             break
 
     return result
+
+def fetchDistrict(ll):
+    """ Purpose:
+        Fetches federal district based upon the latitute and longitude passed as a parameter
+    """
+    #ll = fetchLL(address)
+    lat = ll['lat']
+    lng = ll['lng']
+    URL = r"https://congress.api.sunlightfoundation.com/districts/locate?latitude=" + str(lat) + "&longitude=" + str(lng)
+    DReq = requests.get(URL)
+    DInfo = DReq.text
+    DData = json.loads(DInfo)
+    D = DData['results'][0]['district']
+    return D
+
+# end get geo~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+# support functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`
+
+
+def fetchPhoto(twitter):
+    URL = r'https://twitter.com/' + twitter
+    source = requests.get(URL)
+    picURL = ""
+    plain_text = source.text
+    soup = BeautifulSoup(plain_text)
+    for photo in soup.find_all('img', {'class':'ProfileAvatar-image '}):
+        picURL = photo.get('src')
+    return picURL
+
+
+
+def generate_QR_code():
+    """ Description:
+        Generates QR Code
+    """
+    # since the avialability of api is everyones blocking factor
+    # and in the long run the qr code is vital, but in the short term we
+    # dont need the qr code
+
+
+# end support functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`
+
+
+# classes~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class state:
+    def __init__(self, data):
+        self.name=data['full_name']
+        for office in data['offices']:
+            if office['name'] == 'Home Office':
+                self.phone=None
+                continue
+            else:
+                self.phone=office['phone']
+        self.picURL = data['photo_url']
+        self.party = data['party']
+        self.email = data['email']
+        self.tags = list()
+        LOH = data['roles'][0]['chamber']
+        if LOH == 'lower':
+            #self.senOrRep = 1
+            self.tags.append(TagIDs['representative'])
+        else:
+            self.tags.append(TagIDs['senator'])
+        self.tags.append(TagIDs['state'])
+
+    def returnDict(self):
+        dict = {'name':self.name,'phone':self.phone,'picURL':self.picURL,'email':self.email,'party':self.party,'tags':self.tags}
+        return dict
+
+
+class federal:
+    def __init__(self, data):
+        self.tags = list()
+        self.name = data['first_name'] + ' ' + data['last_name']
+        self.phone = data['roles'][0]['phone']
+        self.picURL = fetchPhoto(data['twitter_account'])
+        if data['current_party'] == 'R':
+            self.party = 'Republican'
+        else:
+            self.party = 'Democratic'
+        if data['roles'][0]['chamber'] == 'House':
+            # array of tag id's
+            self.tags.append(TagIDs["representative"])
+        else:
+            self.tags.append(TagIDs["senator"])
+        self.tags.append(TagIDs["federal"])
+
+    def returnDict(self):
+        """    Purpose:
+            Puts all of the data from this federal object into a dictionary
+        """
+        dict = {'name':self.name, 'phone':self.phone, 'picURL':self.picURL,'email':'', 'party':self.party, 'tags':self.tags}
+        return dict
+
+#end classes~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~``
+
+
+#fetch functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+def fetchFederal(state, district):
+    """    Purpose:
+        Returns the list of federal objects
+    """
+    fed = []
+    key = ""
+    sURL = r"https://api.propublica.org/congress/v1/members/senate/" + state + r"/current.json"
+    hURL = r"https://api.propublica.org/congress/v1/members/house/" + state + "/" + str(district) + r"/current.json"
+    sReq = requests.get(sURL,headers = {"X-API-Key":PPkey})
+    sInfo = sReq.text
+    sData = json.loads(sInfo)
+    for s in sData['results']:
+        URL = r"https://api.propublica.org/congress/v1/members/"+s['id']+".json"
+        ssReq = requests.get(URL,headers={"X-API-Key":PPkey})
+        ssInfo = ssReq.text
+        ssData = json.loads(ssInfo)
+        ss = ssData['results'][0]
+        # new federal class
+        ssObject = federal(ss)
+        fed.append(ssObject.returnDict())
+    hReq = requests.get(hURL,headers = {"X-API-Key":PPkey})
+    hInfo = hReq.text
+    hData = json.loads(hInfo)
+    for h in hData['results']:
+        URL = r"https://api.propublica.org/congress/v1/members/" + h['id'] + ".json"
+        hhReq = requests.get(URL,headers = {"X-API-Key":PPkey})
+        hhInfo = hhReq.text
+        hhData = json.loads(hhInfo)
+        hh=hhData['results'][0]
+        hhObject=federal(hh)
+        fed.append(hhObject.returnDict())
+    return fed
+
+def fetchState(LL):
+    """Purpose:
+        Fetch all state reps matching the latitude and longitude
+    """
+    ST = fetchStateRep(LL['lat'], LL['lng'])
+    stData = []
+    for st in ST:
+        stObject = state(st)
+        stData.append(stObject.returnDict())
+    return stData
+
+#end fetch functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~``
+
+
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -101,9 +251,7 @@ def getRepresentatives():
     return resp
 
 
-
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# post new script~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 def random_ticket_gen():
     """Description:
@@ -174,8 +322,6 @@ def insert_new_script(dict):
     return ticket
 
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 @GFServer.route('/services/v1/script/', methods=['POST'])
 def postScript():
     """
@@ -194,7 +340,9 @@ def postScript():
     ticket = insert_new_script(script_dict)
     return ticket
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# end post new script~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# delete script~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 @GFServer.route('/services/v1/script/', methods=['DELETE'])
 def deleteScript():
@@ -241,7 +389,9 @@ def deleteScript():
         return "400"
 
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# delete script~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# alltags~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 TagNames = dict()
 TagIDs = dict()
@@ -273,206 +423,13 @@ def getAllTags():
         print ("point b")
         failure_resp = Response('Wrong API Key!', status=404)
         return failure_resp
-    return Response (json.dumps(TagIDs), status=200, mimetype='application/json')
+    return Response (json.dumps(TagNames), status=200, mimetype='application/json')
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-def fetchLL(address):
-    URL=r'https://maps.googleapis.com/maps/api/geocode/json?address='+address+'&key='+GGkey
-    LLReq = requests.get(URL)
-    LLInfo=LLReq.text
-    LLData=json.loads(LLInfo)
-    LL=LLData['results'][0]['geometry']['location']
-    return LL
+# end alltags~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-# vestigial, name conflict
-"""
-def fetchState(address):
-    URL = r'https://maps.googleapis.com/maps/api/geocode/json?address=' + address + '&key=' + GGkey
-    SReq = requests.get(URL)
-    SInfo = SReq.text
-    SData = json.loads(SInfo)
-    # Grabbing out of the first found result,
-    SInfo = SData['results'][0]['address_components']
-    for component in SInfo:
-        if component['types'][0] == 'administrative_area_level_1':
-            State = component['short_name']
-            break
-        else:
-            continue
-    return State
-"""
+# get id and script~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-
-def fetchDistrict(ll):
-    """ Purpose:
-        Fetches federal district based upon the latitute and longitude passed as a parameter
-    """
-    #ll = fetchLL(address)
-    lat = ll['lat']
-    lng = ll['lng']
-    URL = r"https://congress.api.sunlightfoundation.com/districts/locate?latitude=" + str(lat) + "&longitude=" + str(lng)
-    DReq = requests.get(URL)
-    DInfo = DReq.text
-    DData = json.loads(DInfo)
-    D = DData['results'][0]['district']
-    return D
-
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-class state:
-    def __init__(self, data):
-        self.name=data['full_name']
-        for office in data['offices']:
-            if office['name'] == 'Home Office':
-                self.phone=None
-                continue
-            else:
-                self.phone=office['phone']
-        self.picURL = data['photo_url']
-        self.party = data['party']
-        self.email = data['email']
-        self.tags = list()
-        LOH = data['roles'][0]['chamber']
-        if LOH == 'lower':
-            #self.senOrRep = 1
-            self.tags.append(TagIDs['representative'])
-        else:
-            self.tags.append(TagIDs['senator'])
-        self.tags.append(TagIDs['state'])
-
-    def returnDict(self):
-        dict = {'name':self.name,'phone':self.phone,'picURL':self.picURL,'email':self.email,'party':self.party,'tags':self.tags}
-        return dict
-
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-def fetchStateRep(lat, lng):
-    """Purpose:
-        Returns the state representatives' data
-    """
-    URL = r"https://openstates.org/api/v1/legislators/geo/?lat=" + str(lat) + "&long=" + str(lng)
-    stateReq = requests.get(URL)
-    stateInfo = stateReq.text
-    stateData = json.loads(stateInfo)
-    return stateData
-
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-class federal:
-    def __init__(self, data):
-        self.tags = list()
-        self.name = data['first_name'] + ' ' + data['last_name']
-        self.phone = data['roles'][0]['phone']
-        self.picURL = fetchPhoto(data['twitter_account'])
-        if data['current_party'] == 'R':
-            self.party = 'Republican'
-        else:
-            self.party = 'Democratic'
-        if data['roles'][0]['chamber'] == 'House':
-            # array of tag id's
-            self.tags.append(TagIDs["representative"])
-        else:
-            self.tags.append(TagIDs["senator"])
-        self.tags.append(TagIDs["federal"])
-
-    def returnDict(self):
-        """    Purpose:
-            Puts all of the data from this federal object into a dictionary
-        """
-        dict = {'name':self.name, 'phone':self.phone, 'picURL':self.picURL,'email':'', 'party':self.party, 'tags':self.tags}
-        return dict
-
-
-
-def fetchPhoto(twitter):
-    URL = r'https://twitter.com/' + twitter
-    source = requests.get(URL)
-    picURL = ""
-    plain_text = source.text
-    soup = BeautifulSoup(plain_text)
-    for photo in soup.find_all('img', {'class':'ProfileAvatar-image '}):
-        picURL = photo.get('src')
-    return picURL
-
-
-def fetchFederal(state, district):
-    """    Purpose:
-        Returns the list of federal objects
-    """
-    fed = []
-    key = ""
-    sURL = r"https://api.propublica.org/congress/v1/members/senate/" + state + r"/current.json"
-    hURL = r"https://api.propublica.org/congress/v1/members/house/" + state + "/" + str(district) + r"/current.json"
-    sReq = requests.get(sURL,headers = {"X-API-Key":PPkey})
-    sInfo = sReq.text
-    sData = json.loads(sInfo)
-    for s in sData['results']:
-        URL = r"https://api.propublica.org/congress/v1/members/"+s['id']+".json"
-        ssReq = requests.get(URL,headers={"X-API-Key":PPkey})
-        ssInfo = ssReq.text
-        ssData = json.loads(ssInfo)
-        ss = ssData['results'][0]
-        # new federal class
-        ssObject = federal(ss)
-        fed.append(ssObject.returnDict())
-    hReq = requests.get(hURL,headers = {"X-API-Key":PPkey})
-    hInfo = hReq.text
-    hData = json.loads(hInfo)
-    for h in hData['results']:
-        URL = r"https://api.propublica.org/congress/v1/members/" + h['id'] + ".json"
-        hhReq = requests.get(URL,headers = {"X-API-Key":PPkey})
-        hhInfo = hhReq.text
-        hhData = json.loads(hhInfo)
-        hh=hhData['results'][0]
-        hhObject=federal(hh)
-        fed.append(hhObject.returnDict())
-    return fed
-
-
-
-def generate_QR_code():
-    """ Description:
-        Generates QR Code
-    """
-    # since the avialability of api is everyones blocking factor
-    # and in the long run the qr code is vital, but in the short term we
-    # dont need the qr code
-
-
-
-
-def fetchState(LL):
-    """Purpose:
-        Fetch all state reps matching the latitude and longitude
-    """
-    ST = fetchStateRep(LL['lat'], LL['lng'])
-    stData = []
-    for st in ST:
-        stObject = state(st)
-        stData.append(stObject.returnDict())
-    return stData
-
-
-
-
-"""
-@GFServer.route('/services/v1/getfederal/', methods=['GET'])
-def getFederal():
-    key = request.headers.get('key')
-    if (key != APIkey):
-        return json.dumps({'error':'Wrong API Key!'})
-    address = str(request.args.get(key = 'address'))
-    address.replace(' ','+')
-    S = fetchState(address)
-    D = fetchD(address)
-    FD = fetchFederal(S,D)
-    return json.dumps(FD,ensure_ascii=False)
-"""
 
 @GFServer.route('/services/v1/id/', methods=['GET'])
 def getID():
@@ -536,6 +493,7 @@ def getScript():
         return "failed"
 
 
+# end get id and script~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 if __name__ == "__main__":
     GFServer.run()
