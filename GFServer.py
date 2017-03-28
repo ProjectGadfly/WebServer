@@ -9,16 +9,13 @@ import base64
 from os import urandom
 import pyqrcode
 
-#from mysql.connector import MySQLConnection, Error
-#from python_mysql_dbconfig import read_db_config
-
 GFServer = Flask(__name__)
 
 # Config info -- most of this should be *elsewhere*, not committed to public repos!
 DBIP = "127.0.0.1"
 DBUser = "gadfly_user"
 DBName = "gadfly"
-DBPasswd = "gadfly_PW123"
+DBPasswd = "gadfly_pw"
 
 
 # Keys should be removed from GFServer.py
@@ -253,18 +250,22 @@ def random_ticket_gen():
 
 
 def insert_new_script(dict):
-    """ Purpose:
-        Takes the fields provided in the dict parameter and adds a unique randomly generated ticket to
-        the dict to create a new script.
+    """Purpose:
+
+        Takes the fields provided in the dict parameter and adds a
+        unique randomly generated ticket to the dict to create a new
+        script.
+
         Returns:
         A dict, with ticket and id
     """
-    IP = "127.0.0.1"
+
     # cnx is the connection to the database
     cnx = MySQLdb.connect(host = DBIP, user = DBUser, passwd = DBPasswd, db = DBName)
     cursor = cnx.cursor()
     no_success = True
-    # Loop ensues ticket to be randomly generated will be unique
+    # Loop and transaction ensure ticket will be unique even though random
+    cursor.execute("START TRANSACTION")
     while(no_success):
         ticket = str(random_ticket_gen())
         length=len(ticket)
@@ -279,7 +280,6 @@ def insert_new_script(dict):
     dict['ticket'] = ticket
     print("start to try")
     try:
-	#cnx.start_transaction()
         print("start to execute")
         # creates a row in the call script table
         command="INSERT INTO call_scripts (title, content, ticket, expiration_date) VALUES ('{}', '{}', '{}', CURDATE() + INTERVAL 6 MONTH)".format(dict['title'], dict['content'], dict['ticket'])
@@ -318,7 +318,7 @@ def insert_new_script(dict):
     return resp
 
 
-@GFServer.route('/services/v1/script/', methods=['POST'])
+@GFServer.route('/services/v1/script', methods=['POST'])
 def postScript():
     """
     Purpose:
@@ -340,7 +340,7 @@ def postScript():
 
 # delete script~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-@GFServer.route('/services/v1/script/', methods=['DELETE'])
+@GFServer.route('/services/v1/script', methods=['DELETE'])
 def deleteScript():
     """ Purpose:
         Deletes script given a ticket.
@@ -422,7 +422,7 @@ def init_tagnames():
 #automatically load all tags when application start
 init_tagnames()
 
-@GFServer.route('/services/v1/alltags/', methods = ['GET'])
+@GFServer.route('/services/v1/alltags', methods = ['GET'])
 def getAllTags():
     key = request.headers.get('APIKey')
     if (key != APIkey):
@@ -436,7 +436,7 @@ def getAllTags():
 # get id and script~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-@GFServer.route('/services/v1/id/', methods=['GET'])
+@GFServer.route('/services/v1/id', methods=['GET'])
 def getID():
     """ Purpose:
         Given a ticket, find and return the script id
@@ -467,7 +467,7 @@ def getID():
 
 
 
-@GFServer.route('/services/v1/script/', methods=['GET'])
+@GFServer.route('/services/v1/script', methods=['GET'])
 def getScript():
     """ Purpose:
         Given a id, find and return the script
