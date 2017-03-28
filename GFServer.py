@@ -331,7 +331,7 @@ def postScript():
     """
     key = request.headers.get('APIKey')
     if (key != APIkey):
-        return json.dumps({'error':'Wrong API Key!'})
+        return Response('Error: Wrong API Key!', status=401)
     request.get_json(force=True)
     script_dict=request.json
     print("json: "+str(script_dict['tags']))
@@ -364,7 +364,7 @@ def deleteScript():
     IP = "127.0.0.1"
     key = request.headers.get('APIKey')
     if (key != APIkey):
-        return json.dumps({'error':'Wrong API Key!'})
+        return Response('Error: Wrong API Key!', status=401)
     ticket=request.args['ticket']
     cnx = MySQLdb.connect(host = DBIP, user = DBUser, passwd = DBPasswd, db = DBName)
     cursor = cnx.cursor()
@@ -418,9 +418,8 @@ init_tagnames()
 def getAllTags():
     key = request.headers.get('APIKey')
     if (key != APIkey):
-        print ("point b")
-        failure_resp = Response('Wrong API Key!', status=404)
-        return failure_resp
+        return Response('Error: Wrong API Key!', status=401)
+
     return Response (json.dumps(TagNames), status=200, mimetype='application/json')
 
 # end alltags~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -436,7 +435,8 @@ def getID():
     """
     key = request.headers.get('APIKey')
     if (key != APIkey):
-        return json.dumps({'error':'Wrong API Key!'})
+        return Response('Error: Wrong API Key!', status=401)
+
     ticket = request.args['ticket']
     cnx = MySQLdb.connect(host = DBIP, user = DBUser, passwd = DBPasswd, db = DBName)
     cursor = cnx.cursor()
@@ -458,7 +458,8 @@ def getScript():
     """
     key = request.headers.get('APIKey')
     if (key != APIkey):
-        return json.dumps({'error':'Wrong API Key!'})
+        return Response('Error: Wrong API Key!', status=401)
+
     id = request.args['id']
     cnx = MySQLdb.connect(host = DBIP, user = DBUser, passwd = DBPasswd, db = DBName)
     cursor = cnx.cursor()
