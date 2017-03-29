@@ -113,8 +113,12 @@ class federal:
         self.picURL = fetchPhoto(data['twitter_account'])
         if data['current_party'] == 'R':
             self.party = 'Republican'
-        else:
+        elif data['current_party'] == 'D':
             self.party = 'Democratic'
+        elif data['current_party'] == 'I':
+            self.party = 'Independent'
+        else:
+            self.party = 'Unknown'
         if data['roles'][0]['chamber'] == 'House':
             # array of tag id's
             self.tags.append(TagIDs["representative"])
