@@ -1,0 +1,11 @@
+#! /bin/bash
+
+testname=$( basename "$0" )
+testmethod="get"
+# Anthony POllina, Progressive/Democratic (long party name)
+testaddress="961+US-2,+Middlesex,+VT+05602"
+testpath="/services/v1/representatives?address=\"$testaddress\""
+
+time wget --header="APIKey: v1key"  \
+     --method="$testmethod" -S -O "$testname.log" \
+     http://${GADFLY_SERVERIP:=127.0.0.1:5000}${testpath}
