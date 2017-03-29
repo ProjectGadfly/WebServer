@@ -371,13 +371,16 @@ def postScript():
     Returns:
     A dict with a ticket and a id
     """
+    print ("postScript")
     key = request.headers.get('APIKey')
     if (key != APIkey):
         return Response('Error: Wrong API Key!', status=401)
+    print ("point a")
     script=dict()
     script['title']=request.form['title']
     script['content']=request.form['content']
-    script['tags']=request.form['tags']
+    script['tags']=request.form.getlist('tags')
+    print ("point b" + json.dumps(script))
     resp = insert_new_script(script)
     return resp
 
