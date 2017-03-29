@@ -1,0 +1,9 @@
+#! /bin/bash
+
+testname="test-003"
+testmethod="get"
+testpath="/services/v1/representatives?address=\"131+Timberland,+Burnsville\""
+
+time wget --header="APIKey: v1key"  \
+     --method="$testmethod" -S -O "$testname.log" \
+     http://${GADFLY_SERVERIP:=127.0.0.1:5000}${testpath}

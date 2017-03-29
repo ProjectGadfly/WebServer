@@ -1,0 +1,5 @@
+#! /bin/sh
+
+wget --header="APIKey: v1key"  --method=post \
+	 --post-data="title=ScriptTitle&content=lines and lines of script&tags=federal&tags=senator&email=" \
+     http://127.0.0.1:5000/services/v1/script
