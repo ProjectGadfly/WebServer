@@ -15,7 +15,7 @@ GFServer = Flask(__name__)
 DBIP = "127.0.0.1"
 DBUser = "gadfly_user"
 DBName = "gadfly"
-DBPasswd = "gadfly_PW123"
+DBPasswd = "gadfly_pw"
 
 
 # Keys should be removed from GFServer.py
@@ -80,16 +80,17 @@ def fetchPhoto(twitter):
 
 class state:
     def __init__(self, data):
-        self.name=data['full_name']
+        self.name=data['full_name'] if 'full_name' in data else None
+        self.phone = None
         for office in data['offices']:
             if office['name'] == 'Home Office':
                 self.phone=None
                 continue
             else:
-                self.phone=office['phone']
-        self.picURL = data['photo_url']
-        self.party = data['party']
-        self.email = data['email']
+                self.phone=office['phone'] if 'phone' in office else None
+        self.picURL = data['photo_url'] if 'photo_url' in data else None
+        self.party = data['party'] if 'party' in data else None
+        self.email = data['email'] if 'email' in data else None
         self.tags = list()
         LOH = data['roles'][0]['chamber']
         if LOH == 'lower':
