@@ -111,7 +111,6 @@ class federal:
         self.name = data['first_name'] + ' ' + data['last_name']
         self.phone = data['roles'][0]['phone']
         self.picURL = fetchPhoto(data['twitter_account'])
-        print ("Name "+self.name+" party "+data['current_party'])
         if data['current_party'] == 'R':
             self.party = 'Republican'
         elif data['current_party'] == 'D':
