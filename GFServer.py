@@ -215,9 +215,12 @@ def get_representatives_helper(LLData):
     # retreive state data
     states = fetchState(ll)
     # Merge and return federal and state
+    result_dict=dict()
+    result_dict['Status']='OK'
     results = federals
     results.extend(states)
-    return results
+    result_dict['Results']=results
+    return result_dict
 
 
 
@@ -239,23 +242,32 @@ def getRepresentatives():
     address = request.args['address']
     URL = r'https://maps.googleapis.com/maps/api/geocode/json?address=' + address + '&key=' + GGkey
     LLData = json.loads(requests.get(URL).text)
+    msg=dict()
     if LLData['status'] != 'OK':
-        resp = Response("{'Error':'invalid address'}", status=404, mimetype='application/json')
+        msg['Status']='invalid address'
+        resp = Response(json.dumps(msg), status=404, mimetype='application/json')
         return resp
     for c in LLData['results'][0]['address_components']:
         if 'country' in c['types']:
             if c['short_name'] != 'US':
-                resp = Response("{'Error':'address should be in US'}", status=404, mimetype='application/json')
+                msg['Status']='address should be in US'
+                resp = Response(json.dumps(msg), status=404, mimetype='application/json')
                 return resp
             break
     if len(LLData['results'][0]['address_components'])<3:
-        resp = Response("{'Error':'address too broad'}", status=404, mimetype='application/json')
+        msg['Status']='address too broad'
+        resp = Response(json.dumps(msg), status=404, mimetype='application/json')
         return resp
     # Retreive representative data from helper function
-    all_reps = get_representatives_helper(LLData)
-    js = json.dumps(all_reps)
-    resp = Response(js, status=200, mimetype='application/json')
-    return resp
+    try:
+        all_reps = get_representatives_helper(LLData)
+        js = json.dumps(all_reps)
+        resp = Response(js, status=200, mimetype='application/json')
+        return resp
+    except:
+        msg['Status']='Failed to get reps'
+        resp = Response(json.dumps(msg), status=404, mimetype='application/json')
+
 
 
 # post new script~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -269,7 +281,7 @@ def random_ticket_gen():
 
 
 
-def insert_new_script(dict):
+def insert_new_script(sdict):
     """Purpose:
 
         Takes the fields provided in the dict parameter and adds a
@@ -285,7 +297,7 @@ def insert_new_script(dict):
     cursor = cnx.cursor()
     no_success = True
     # Loop and transaction ensure ticket will be unique even though random
-    cursor.execute("START TRANSACTION")
+	#cursor.execute("START TRANSACTION")
     while(no_success):
         ticket = str(random_ticket_gen())
         length=len(ticket)
@@ -297,12 +309,12 @@ def insert_new_script(dict):
         result=cursor.fetchone()[0]
         if result==0:
             no_success=False
-    dict['ticket'] = ticket
+    sdict['ticket'] = ticket
     print("start to try")
     try:
         print("start to execute")
         # creates a row in the call script table
-        command="INSERT INTO call_scripts (title, content, ticket, expiration_date) VALUES ('{}', '{}', '{}', CURDATE() + INTERVAL 6 MONTH)".format(dict['title'], dict['content'], dict['ticket'])
+        command="INSERT INTO call_scripts (title, content, ticket, expiration_date) VALUES ('{}', '{}', '{}', CURDATE() + INTERVAL 6 MONTH)".format(sdict['title'], sdict['content'], sdict['ticket'])
         print(command)
         cursor.execute(command)
         print('start ot get id')
@@ -311,7 +323,7 @@ def insert_new_script(dict):
         no_success = False
         print("start to insert tags")
         # Create new entries in table to associate scripts and tags
-        for tag_id in dict['tags']:
+        for tag_id in sdict['tags']:
             command="INSERT INTO link_callscripts_tags (call_script_id, tag_id) VALUES ({}, {})".format(new_id, tag_id)
             print(command)
             cursor.execute(command)
@@ -329,14 +341,21 @@ def insert_new_script(dict):
 			#    raise
     except:
         cnx.close()
-        resp = Response("{'Error':'Post failed'}", status=404, mimetype='application/json')
+        result=dict()
+        result['Status']='Failed to post'
+        resp = Response(json.dumps(result), status=404, mimetype='application/json')
         return resp
 
     cnx.close()
-    result={'ticket':ticket,'id':new_id}
+    result=dict()
+    result['Status']='OK'
+    result['ticket']=ticket
+    result['id']=new_id
     resp = Response(json.dumps(result), status=200, mimetype='application/json')
     return resp
 
+dicta={'title':'test','content':'testcontent','tags':[1,2,3]}
+print("titlellllllllll"+str(dicta['tags'][0]))
 
 @GFServer.route('/services/v1/script', methods=['POST'])
 def postScript():
@@ -350,10 +369,11 @@ def postScript():
     key = request.headers.get('APIKey')
     if (key != APIkey):
         return Response('Error: Wrong API Key!', status=401)
-    request.get_json(force=True)
-    script_dict=request.json
-    print("json: "+str(script_dict['tags']))
-    resp = insert_new_script(script_dict)
+    script=dict()
+    script['title']=request.form['title']
+    script['content']=request.form['content']
+    script['tags']=request.form['tags']
+    resp = insert_new_script(script)
     return resp
 
 # end post new script~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -392,7 +412,7 @@ def deleteScript():
     result=cursor.fetchone()[0]
     print("resultttttt"+str(result))
     if result==0:
-        resp = Response("{'Error':'No such ticket'}", status=404, mimetype='application/json')
+        resp = Response("{'Status':'No such ticket'}", status=404, mimetype='application/json')
         return resp
     # try to delete call script based on ticket number parameter
     try:
@@ -408,12 +428,12 @@ def deleteScript():
         query = "DELETE FROM call_scripts WHERE ticket = '{}'".format(ticket)
         print(query)
         cursor.execute(query)
-        success_resp = Response("{'Result':'Deletion Succeeded'}", status=200, mimetype='application/json')
+        success_resp = Response("{'Status':'OK'}", status=200, mimetype='application/json')
         cnx.commit()
         cnx.close()
         return success_resp
     except:
-        failure_resp = Response("{'Error':'Deletion Failed'}", status=404, mimetype='application/json')
+        failure_resp = Response("{'Status':'Deletion Failed'}", status=404, mimetype='application/json')
         cnx.close()
         return failure_resp
 
@@ -446,6 +466,8 @@ def init_tagnames():
 
 #automatically load all tags when application start
 init_tagnames()
+print(str(TagNames))
+print(str(TagIDs))
 
 @GFServer.route('/services/v1/alltags', methods = ['GET'])
 def getAllTags():
@@ -478,7 +500,7 @@ def getID():
     cursor.execute(command)
     result=cursor.fetchone()[0]
     if result==0:
-        resp = Response("{'Error':'No such ticket'}", status=404, mimetype='application/json')
+        resp = Response("{'Status':'No such ticket'}", status=404, mimetype='application/json')
         return resp
     try:
         command = "SELECT unique_id FROM call_scripts WHERE ticket = '{}'".format(ticket)
@@ -487,10 +509,10 @@ def getID():
         print("finish getting id")
         row = cursor.fetchone()
         id = row[0]
-        resp = Response("{'id':"+str(id)+"}", status=200, mimetype='application/json')
+        resp = Response("{'Status':'OK','id':"+str(id)+"}", status=200, mimetype='application/json')
         return resp
     except:
-        resp = Response("{'id':null}", status=404, mimetype='application/json')
+        resp = Response("{'Status':'Failed to get id'}", status=404, mimetype='application/json')
         return resp
 
 
@@ -511,7 +533,7 @@ def getScript():
     cursor.execute(command)
     result=cursor.fetchone()[0]
     if result==0:
-        resp = Response("{'Error':'No such id'}", status=404, mimetype='application/json')
+        resp = Response("{'Status':'No such id'}", status=404, mimetype='application/json')
         return resp
     try:
         print("start to get script")
@@ -527,17 +549,14 @@ def getScript():
         rows = cursor.fetchall()
         for row in rows:
             print(str(row[0]))
-            print("start to get tagnames")
-            command="SELECT tag_name FROM tags WHERE unique_id = {}".format(int(row[0]));
-            print(command)
-            cursor.execute(command);
-            tag_name=cursor.fetchone()[0]
-            print(tag_name)
-            script['tags'].append(tag_name)
-        resp = Response(json.dumps(script), status=200, mimetype='application/json')
+            tag_id=row[0]
+            script['tags'].append(tag_id)
+            result['Status']='OK'
+            result['Script']=script
+        resp = Response(json.dumps(result), status=200, mimetype='application/json')
         return resp
     except:
-        resp = Response("{'Script':null}", status=404, mimetype='application/json')
+        resp = Response("{'Status':'Failed to get script'", status=404, mimetype='application/json')
         return resp
 
 
