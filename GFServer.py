@@ -15,7 +15,7 @@ GFServer = Flask(__name__)
 DBIP = "127.0.0.1"
 DBUser = "gadfly_user"
 DBName = "gadfly"
-DBPasswd = "gadfly_pw"
+DBPasswd = "gadfly_PW123"
 
 
 # Keys should be removed from GFServer.py
@@ -27,18 +27,13 @@ APIkey="v1key"
 #get geo~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-def addrToGeo(address):
+def addrToGeo(LLData):
     """ Purpose:
         Get both state and latitude/longitude in one call (saves hits on our Google API key, so it's
         worth a little extra trouble).
         Returns:
         A dictionary
     """
-    URL = r'https://maps.googleapis.com/maps/api/geocode/json?address=' + address + '&key=' + GGkey
-    LLData = json.loads(requests.get(URL).text)
-    print(LLData)
-    if LLData['status'] != 'OK':
-        raise Exception("Error return from Google geocode")
     result = dict()
     result['LL'] = LLData['results'][0]['geometry']['location']
     for c in LLData['results'][0]['address_components']:
@@ -171,6 +166,16 @@ def fetchFederal(state, district):
         fed.append(hhObject.returnDict())
     return fed
 
+def fetchStateRep(lat, lng):
+    """Purpose:
+    Returns the state representatives' data
+    """
+    URL = r"https://openstates.org/api/v1/legislators/geo/?lat=" + str(lat) + "&long=" + str(lng)
+    stateReq = requests.get(URL)
+    stateInfo = stateReq.text
+    stateData = json.loads(stateInfo)
+    return stateData
+
 def fetchState(LL):
     """Purpose:
         Fetch all state reps matching the latitude and longitude
@@ -195,12 +200,12 @@ def fetchState(LL):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-def get_representatives_helper(address):
+def get_representatives_helper(LLData):
     """ Purpose:
         Retreive geocode location from address
         Retreive state and federal representatives from data providers
     """
-    dict_coord_state = addrToGeo(address)
+    dict_coord_state = addrToGeo(LLData)
     ll = dict_coord_state['LL']
     district = fetchDistrict(ll)
     state = dict_coord_state['state']
@@ -231,8 +236,22 @@ def getRepresentatives():
     if (key != APIkey):
         return Response('Error: Wrong API Key!', status=401)
     address = request.args['address']
+    URL = r'https://maps.googleapis.com/maps/api/geocode/json?address=' + address + '&key=' + GGkey
+    LLData = json.loads(requests.get(URL).text)
+    if LLData['status'] != 'OK':
+        resp = Response("{'Error':'invalid address'}", status=404, mimetype='application/json')
+        return resp
+    for c in LLData['results'][0]['address_components']:
+        if 'country' in c['types']:
+            if c['short_name'] != 'US':
+                resp = Response("{'Error':'address should be in US'}", status=404, mimetype='application/json')
+                return resp
+            break
+    if len(LLData['results'][0]['address_components'])<3:
+        resp = Response("{'Error':'address too broad'}", status=404, mimetype='application/json')
+        return resp
     # Retreive representative data from helper function
-    all_reps = get_representatives_helper(address)
+    all_reps = get_representatives_helper(LLData)
     js = json.dumps(all_reps)
     resp = Response(js, status=200, mimetype='application/json')
     return resp
@@ -377,18 +396,23 @@ def deleteScript():
     # try to delete call script based on ticket number parameter
     try:
         print("start delete script")
+        query = "SELECT unique_id FROM call_scripts WHERE ticket = '{}'".format(ticket)
+        print(query)
+        cursor.execute(query)
+        id=cursor.fetchone()[0]
+        print("idddddddddd"+str(id))
+        query = "DELETE FROM link_callscripts_tags WHERE call_script_id = {}".format(id)
+        print(query)
+        cursor.execute(query)
         query = "DELETE FROM call_scripts WHERE ticket = '{}'".format(ticket)
         print(query)
         cursor.execute(query)
-        # success case
-        success_resp = Response("{'Result':'Success'}", status=200, mimetype='application/json')
-        # save the changes
+        success_resp = Response("{'Result':'Deletion Succeeded'}", status=200, mimetype='application/json')
         cnx.commit()
         cnx.close()
         return success_resp
-    except Error as error:
-        # failure case
-        failure_resp = Response("{'Result':'Failed'}", status=404, mimetype='application/json')
+    except:
+        failure_resp = Response("{'Error':'Deletion Failed'}", status=404, mimetype='application/json')
         cnx.close()
         return failure_resp
 
@@ -456,10 +480,13 @@ def getID():
         resp = Response("{'Error':'No such ticket'}", status=404, mimetype='application/json')
         return resp
     try:
-        cursor.execute("SELECT unique_id FROM call_scripts WHERE ticket = {}".format(ticket));
+        command = "SELECT unique_id FROM call_scripts WHERE ticket = '{}'".format(ticket)
+        print(command)
+        cursor.execute(command)
+        print("finish getting id")
         row = cursor.fetchone()
         id = row[0]
-        resp = Response("{'id':"+id+"}", status=200, mimetype='application/json')
+        resp = Response("{'id':"+str(id)+"}", status=200, mimetype='application/json')
         return resp
     except:
         resp = Response("{'id':null}", status=404, mimetype='application/json')
