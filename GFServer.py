@@ -15,7 +15,7 @@ GFServer = Flask(__name__)
 DBIP = "127.0.0.1"
 DBUser = "gadfly_user"
 DBName = "gadfly"
-DBPasswd = "gadfly_pw"
+DBPasswd = "gadfly_PW123"
 
 
 # Keys should be removed from GFServer.py
@@ -66,7 +66,7 @@ def fetchPhoto(twitter):
     source = requests.get(URL)
     picURL = ""
     plain_text = source.text
-    soup = BeautifulSoup(plain_text)
+    soup = BeautifulSoup(plain_text,"html.parser")
     for photo in soup.find_all('img', {'class':'ProfileAvatar-image '}):
         picURL = photo.get('src')
     return picURL
@@ -307,9 +307,8 @@ def insert_new_script(sdict):
         ticket = str(random_ticket_gen())
         length=len(ticket)
         ticket=ticket[2:length-1]
-        command="SELECT EXISTS(SELECT title FROM call_scripts WHERE ticket='{}')".format(ticket)
-        print(command)
-        cursor.execute(command)
+        command="SELECT EXISTS(SELECT title FROM call_scripts WHERE ticket=%s)"
+        cursor.execute(command,(ticket,))
         result=cursor.fetchone()[0]
         if result==0:
             no_success=False
@@ -318,9 +317,9 @@ def insert_new_script(sdict):
     try:
         print("start to execute")
         # creates a row in the call script table
-        command="INSERT INTO call_scripts (title, content, ticket, expiration_date) VALUES ('{}', '{}', '{}', CURDATE() + INTERVAL 6 MONTH)".format(sdict['title'], sdict['content'], sdict['ticket'])
+        command="INSERT INTO call_scripts (title, content, ticket, expiration_date) VALUES (%s, %s, %s, CURDATE() + INTERVAL 6 MONTH)"
         print(command)
-        cursor.execute(command)
+        cursor.execute(command,(sdict['title'], sdict['content'], sdict['ticket']))
         print('start ot get id')
         new_id = cnx.insert_id()
         print("new id is "+str(new_id))
@@ -328,9 +327,8 @@ def insert_new_script(sdict):
         print("start to insert tags")
         # Create new entries in table to associate scripts and tags
         for tag_id in sdict['tags']:
-            command="INSERT INTO link_callscripts_tags (call_script_id, tag_id) VALUES ({}, {})".format(new_id, tag_id)
-            print(command)
-            cursor.execute(command)
+            command="INSERT INTO link_callscripts_tags (call_script_id, tag_id) VALUES (%s, %s)"
+            cursor.execute(command,(new_id,tag_id))
         cnx.commit()
         """
             If email sending is added it will be added here
@@ -349,7 +347,6 @@ def insert_new_script(sdict):
         result['Status']='Failed to post'
         resp = Response(json.dumps(result), status=404, mimetype='application/json')
         return resp
-
     cnx.close()
     result=dict()
     result['Status']='OK'
@@ -414,8 +411,8 @@ def deleteScript():
     cnx = MySQLdb.connect(host = DBIP, user = DBUser, passwd = DBPasswd, db = DBName)
     cursor = cnx.cursor()
     print("ticketttttttt"+ticket)
-    command="SELECT EXISTS(SELECT title FROM call_scripts WHERE ticket='{}')".format(ticket)
-    cursor.execute(command)
+    command="SELECT EXISTS(SELECT title FROM call_scripts WHERE ticket=%s)"
+    cursor.execute(command,(ticket,))
     result=cursor.fetchone()[0]
     print("resultttttt"+str(result))
     if result==0:
@@ -424,17 +421,17 @@ def deleteScript():
     # try to delete call script based on ticket number parameter
     try:
         print("start delete script")
-        query = "SELECT unique_id FROM call_scripts WHERE ticket = '{}'".format(ticket)
+        query = "SELECT unique_id FROM call_scripts WHERE ticket = %s"
         print(query)
-        cursor.execute(query)
+        cursor.execute(query,(ticket,))
         id=cursor.fetchone()[0]
         print("idddddddddd"+str(id))
-        query = "DELETE FROM link_callscripts_tags WHERE call_script_id = {}".format(id)
+        query = "DELETE FROM link_callscripts_tags WHERE call_script_id = %s"
         print(query)
-        cursor.execute(query)
-        query = "DELETE FROM call_scripts WHERE ticket = '{}'".format(ticket)
+        cursor.execute(query,(id,))
+        query = "DELETE FROM call_scripts WHERE ticket = %s"
         print(query)
-        cursor.execute(query)
+        cursor.execute(query,(ticket,))
         success_resp = Response("{'Status':'OK'}", status=200, mimetype='application/json')
         cnx.commit()
         cnx.close()
@@ -503,16 +500,16 @@ def getID():
     ticket=ticket.replace(" ","+")
     cnx = MySQLdb.connect(host = DBIP, user = DBUser, passwd = DBPasswd, db = DBName)
     cursor = cnx.cursor()
-    command="SELECT EXISTS(SELECT title FROM call_scripts WHERE ticket='{}')".format(ticket)
-    cursor.execute(command)
+    command="SELECT EXISTS(SELECT title FROM call_scripts WHERE ticket=%s)"
+    cursor.execute(command,(ticket,))
     result=cursor.fetchone()[0]
     if result==0:
         resp = Response("{'Status':'No such ticket'}", status=404, mimetype='application/json')
         return resp
     try:
-        command = "SELECT unique_id FROM call_scripts WHERE ticket = '{}'".format(ticket)
+        command = "SELECT unique_id FROM call_scripts WHERE ticket = %s"
         print(command)
-        cursor.execute(command)
+        cursor.execute(command,(ticket,))
         print("finish getting id")
         row = cursor.fetchone()
         id = row[0]
@@ -537,13 +534,15 @@ def getScript():
     cnx = MySQLdb.connect(host = DBIP, user = DBUser, passwd = DBPasswd, db = DBName)
     cursor = cnx.cursor()
     try:
-        cursor.execute("SELECT title,content FROM call_scripts WHERE unique_id = {}".format(id));
+        command="SELECT title,content FROM call_scripts WHERE unique_id = %s"
+        cursor.execute(command,(id,));
         row = cursor.fetchone()
         script=dict()
         script['title'] = row[0]
         script['content'] = row[1]
         script['tags'] = list()
-        cursor.execute("SELECT tag_id FROM link_callscripts_tags WHERE call_script_id = {}".format(id));
+        command="SELECT tag_id FROM link_callscripts_tags WHERE call_script_id = %s"
+        cursor.execute(command,(id,));
         rows = cursor.fetchall()
         for row in rows:
             tag_id=row[0]
