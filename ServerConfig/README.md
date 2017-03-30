@@ -6,21 +6,22 @@ CD to some private directory you can write to, such as
 
 cd /home/ubuntu
 
-If you don't have the repositories already, clone the two
-we need, otherwise pull from them to be sure you havethe
-latest content.
+If you don't have the repositorys already, clone it, otherwise pull
+from them to be sure you have the latest content.
 
-sudo git clone https://github.com/ProjectGadfly/ServerConfig.git
 sudo git clone https://github.com/ProjectGadfly/WebServer
 
-WARNING:  Yes, you have to run this out of the directory above!
-The serverconfig.sh script remembers where it started and uses
-that, and if you start if from anywhere else it won't work.
+Cd into the repo.
 
-sudo chmod +x ServerConfig/serverconfig.sh
-sudo ./ServerConfig/serverconfig.sh
+cd WebServer
+
+(Yes you have to run it from up here!)
+
+sudo -H ./ServerConfig/serverconfig.sh
 
 
 After running the shell script:
 
 sudo mysql_secure_installation
+
+and run the sql to init the database

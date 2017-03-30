@@ -17,17 +17,17 @@ rm -rf /var/www/GFServer
 mkdir -p /var/www/GFServer
 echo "moving files to GFServer"
 # if below command returns a non-zero statues, then run /bin/true/ 
-cp ServerConfig/* /var/www/GFServer/ || true
+cp ../ServerConfig/* /var/www/GFServer/ || true
 echo ""
 # replace existing python module with current (resp) version
 mkdir -p /var/www/GFServer/services
-cp WebServer/GFServer.py /var/www/GFServer/services
+cp GFServer.py /var/www/GFServer/services
 cp ServerConfig/services/GFServer.wsgi /var/www/GFServer/services
 echo "Make New Python virtualenv"
 cd /var/www/GFServer/
 virtualenv -p /usr/bin/python3 flaskappenv
 source flaskappenv/bin/activate
-pip install -r $origdir/WebServer/requirements.txt
+pip install -r $origdir/requirements.txt
 echo "moving Apache config into place"
 cp $origdir/ServerConfig/services/GFServer.conf /etc/apache2/sites-available/
 sed -i '1 a\127.0.0.1       GFServer' /etc/hosts
