@@ -307,7 +307,6 @@ def insert_new_script(sdict):
         ticket = str(random_ticket_gen())
         length=len(ticket)
         ticket=ticket[2:length-1]
-        print(ticket)
         command="SELECT EXISTS(SELECT title FROM call_scripts WHERE ticket='{}')".format(ticket)
         print(command)
         cursor.execute(command)
@@ -537,34 +536,28 @@ def getScript():
     id = request.args['id']
     cnx = MySQLdb.connect(host = DBIP, user = DBUser, passwd = DBPasswd, db = DBName)
     cursor = cnx.cursor()
-    command="SELECT EXISTS(SELECT title FROM call_scripts WHERE unique_id={})".format(id)
-    cursor.execute(command)
-    result=cursor.fetchone()[0]
-    if result==0:
-        resp = Response("{'Status':'No such id'}", status=404, mimetype='application/json')
-        return resp
     try:
-        print("start to get script")
         cursor.execute("SELECT title,content FROM call_scripts WHERE unique_id = {}".format(id));
         row = cursor.fetchone()
         script=dict()
         script['title'] = row[0]
         script['content'] = row[1]
         script['tags'] = list()
-        print(str(script))
-        print("start to get tags")
         cursor.execute("SELECT tag_id FROM link_callscripts_tags WHERE call_script_id = {}".format(id));
         rows = cursor.fetchall()
         for row in rows:
-            print(str(row[0]))
             tag_id=row[0]
             script['tags'].append(tag_id)
-            result['Status']='OK'
-            result['Script']=script
-        resp = Response(json.dumps(result), status=200, mimetype='application/json')
+        result = dict()
+        result['Status']='OK'
+        result['Script']=script
+        js=json.dumps(result)
+        resp = Response(js, status=200, mimetype='application/json')
+        cursor.close()
+        cnx.close()
         return resp
     except:
-        resp = Response("{'Status':'Failed to get script'", status=404, mimetype='application/json')
+        resp = Response("{'Status':'Failed to get script'}", status=404, mimetype='application/json')
         return resp
 
 
