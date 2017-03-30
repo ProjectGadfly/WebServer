@@ -7,7 +7,6 @@ from bs4 import BeautifulSoup
 import MySQLdb 
 import base64
 from os import urandom
-import pyqrcode
 
 GFServer = Flask(__name__)
 
@@ -15,7 +14,7 @@ GFServer = Flask(__name__)
 DBIP = "127.0.0.1"
 DBUser = "gadfly_user"
 DBName = "gadfly"
-DBPasswd = "gadfly_PW123"
+DBPasswd = "gadfly_pw"
 
 
 # Keys should be removed from GFServer.py
