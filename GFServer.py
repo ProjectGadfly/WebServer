@@ -228,7 +228,7 @@ def get_representatives_helper(LLData):
 
 
 
-@GFServer.route('/services/v1/representatives', methods=['GET'])
+@GFServer.route('/v1/representatives', methods=['GET'])
 def getRepresentatives():
     """ Description:
         Gets information on senators and representatives given an address.
@@ -357,7 +357,7 @@ def insert_new_script(sdict):
 dicta={'title':'test','content':'testcontent','tags':[1,2,3]}
 print("titlellllllllll"+str(dicta['tags'][0]))
 
-@GFServer.route('/services/v1/script', methods=['POST'])
+@GFServer.route('/v1/script', methods=['POST'])
 def postScript():
     """
     Purpose:
@@ -383,7 +383,7 @@ def postScript():
 
 # delete script~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-@GFServer.route('/services/v1/script', methods=['DELETE'])
+@GFServer.route('/v1/script', methods=['DELETE'])
 def deleteScript():
     """ Purpose:
         Deletes script given a ticket.
@@ -472,7 +472,7 @@ init_tagnames()
 print(str(TagNames))
 print(str(TagIDs))
 
-@GFServer.route('/services/v1/alltags', methods = ['GET'])
+@GFServer.route('/v1/alltags', methods = ['GET'])
 def getAllTags():
     key = request.headers.get('APIKey')
     if (key != APIkey):
@@ -486,7 +486,7 @@ def getAllTags():
 # get id and script~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-@GFServer.route('/services/v1/id', methods=['GET'])
+@GFServer.route('/v1/id', methods=['GET'])
 def getID():
     """ Purpose:
         Given a ticket, find and return the script id
@@ -520,7 +520,7 @@ def getID():
 
 
 
-@GFServer.route('/services/v1/script', methods=['GET'])
+@GFServer.route('/v1/script', methods=['GET'])
 def getScript():
     """ Purpose:
         Given a id, find and return the script

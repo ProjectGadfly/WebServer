@@ -4,7 +4,6 @@
 -- Select database gadlfy if it exists
 DROP DATABASE IF EXISTS gadfly;
 
-
 -- Create initial database
 CREATE DATABASE gadfly;
 
@@ -20,7 +19,7 @@ CREATE TABLE call_scripts (
   content TEXT NOT NULL,
   ticket VARCHAR(255) NOT NULL UNIQUE,
   date_created TIMESTAMP NOT NULL,
-  expiration_date DATETIME NOT NULL,
+  expiration_date DATETIME NOT NULL
 );
 
 
