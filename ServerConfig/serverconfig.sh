@@ -17,7 +17,7 @@ rm -rf /var/www/GFServer
 mkdir -p /var/www/GFServer
 echo "moving files to GFServer"
 # if below command returns a non-zero statues, then run /bin/true/ 
-cp ../ServerConfig/* /var/www/GFServer/ || true
+cp -r ./ServerConfig/* /var/www/GFServer/ || true
 echo ""
 # replace existing python module with current (resp) version
 mkdir -p /var/www/GFServer/services
